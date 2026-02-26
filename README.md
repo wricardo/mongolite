@@ -114,6 +114,58 @@ mongolite-cli find users --filter '{"age": {"$gt": 25}}' | jq -c '{name, age}'
 - OP_QUERY (opcode 2004) — legacy protocol for driver handshake compatibility
 - OP_REPLY (opcode 1) — legacy reply format
 
+## Use Case: Agent State Persistence
+
+mongolite works well as a local state store for multi-step AI agent workflows. Any MongoDB driver connects to it, so you can persist task state, variables, and control flow between steps without running a real database.
+
+### Task state tracking
+
+```bash
+# Step 1: create a task
+mongolite-cli insert tasks --doc '{"task_id": "abc", "status": "pending", "step": 1, "vars": {"url": "https://example.com"}}'
+
+# Step 2: read current state
+mongolite-cli find tasks --filter '{"task_id": "abc"}' | jq '.vars'
+
+# Step 3: update after completing a step
+mongolite-cli update tasks --filter '{"task_id": "abc"}' --update '{"$set": {"step": 2, "status": "in_progress", "vars.result": "fetched"}}'
+```
+
+### Step queue / control flow
+
+```bash
+# Enqueue steps
+mongolite-cli insert-many steps --docs '[
+  {"order": 1, "action": "fetch", "done": false},
+  {"order": 2, "action": "parse", "done": false},
+  {"order": 3, "action": "summarize", "done": false}
+]'
+
+# Get next pending step
+mongolite-cli find steps --filter '{"done": false}' --sort '{"order": 1}' --limit 1
+
+# Mark done
+mongolite-cli update steps --filter '{"order": 1}' --update '{"$set": {"done": true, "result": "ok"}}'
+```
+
+### From Go code
+
+```go
+client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017/?directConnection=true"))
+coll := client.Database("agent").Collection("state")
+
+// Upsert current state
+coll.UpdateOne(ctx, bson.M{"task_id": taskID}, bson.M{
+    "$set": bson.M{"step": 3, "vars.output": result},
+}, options.UpdateOne().SetUpsert(true))
+
+// Read state
+var state TaskState
+coll.FindOne(ctx, bson.M{"task_id": taskID}).Decode(&state)
+```
+
+The advantage over a plain JSON file: you get query/filter/update semantics instead of read-modify-write-entire-file. Shell scripts (via `mongolite-cli`) and Go/Python/Node code can all hit the same data store. The data file persists across restarts, so an agent can crash and resume from its last saved state.
+
 ## Architecture
 
 ```
