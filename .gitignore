@@ -1,0 +1,16 @@
+# Binary
+mongolite
+mongolite-cli
+
+# Data files
+*.db
+*.db.tmp
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
