@@ -13,7 +13,7 @@ import (
 
 func main() {
 	port := flag.Int("port", 27017, "TCP port to listen on")
-	file := flag.String("file", "mongolite.db", "path to the data file")
+	file := flag.String("file", "mongolite.json", "path to the data file")
 	flag.Parse()
 
 	eng, err := engine.New(*file)

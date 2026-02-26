@@ -7,18 +7,18 @@ mongolite implements the MongoDB wire protocol so any standard MongoDB client or
 ## Why?
 
 - **No MongoDB installation required.** Run `go run .` and you have a working MongoDB-compatible server.
-- **Single-file storage.** All data lives in one BSON file. Copy it, back it up, or delete it.
+- **Single-file storage.** All data lives in one JSON file. Human-readable, diffable, committable.
 - **Zero dependencies at runtime.** Pure Go, no external services.
 - **Drop-in replacement for development.** Use the same driver code you'd use with a real MongoDB instance.
 
 ## Quick Start
 
 ```bash
-# Start the server (default port 27017, data file mongolite.db)
+# Start the server (default port 27017, data file mongolite.json)
 go run .
 
 # Or with custom options
-go run . --port 27018 --file mydata.db
+go run . --port 27018 --file mydata.json
 ```
 
 Connect with any MongoDB client:
@@ -185,11 +185,11 @@ MongoDB Client
       │  In-memory store protected by RWMutex
       │  Filter matching, update operators, aggregation pipeline
       ▼
-  BSON File (mongolite.db)
+  JSON File (mongolite.json)
       Atomic writes via temp file + rename
 ```
 
-- **Storage:** All data is held in memory and persisted to a single BSON file on every write. Writes are atomic (write to `.tmp`, then `os.Rename`).
+- **Storage:** All data is held in memory and persisted to a single JSON file on every write. Writes are atomic (write to `.tmp`, then `os.Rename`). The file uses MongoDB Extended JSON format — human-readable and git-diffable.
 - **Concurrency:** A `sync.RWMutex` protects the in-memory store. Multiple readers, single writer.
 - **IDs:** Documents without an `_id` field get an auto-generated `ObjectID`.
 

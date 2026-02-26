@@ -8,22 +8,22 @@ import (
 )
 
 type Store struct {
-	Databases map[string]*Database `bson:"databases"`
+	Databases map[string]*Database `bson:"databases" json:"databases"`
 }
 
 type Database struct {
-	Collections map[string]*Collection `bson:"collections"`
+	Collections map[string]*Collection `bson:"collections" json:"collections"`
 }
 
 type Collection struct {
-	Documents []bson.D    `bson:"documents"`
-	Indexes   []IndexSpec `bson:"indexes"`
+	Documents []bson.D    `bson:"documents" json:"documents"`
+	Indexes   []IndexSpec `bson:"indexes" json:"indexes"`
 }
 
 type IndexSpec struct {
-	Name   string `bson:"name"`
-	Keys   bson.D `bson:"key"`
-	Unique bool   `bson:"unique"`
+	Name   string `bson:"name" json:"name"`
+	Keys   bson.D `bson:"key" json:"key"`
+	Unique bool   `bson:"unique" json:"unique"`
 }
 
 func NewStore() *Store {
@@ -60,7 +60,7 @@ func LoadStore(path string) (*Store, error) {
 		return NewStore(), nil
 	}
 	var s Store
-	if err := bson.Unmarshal(data, &s); err != nil {
+	if err := bson.UnmarshalExtJSON(data, false, &s); err != nil {
 		return nil, fmt.Errorf("unmarshal store: %w", err)
 	}
 	if s.Databases == nil {
@@ -75,7 +75,7 @@ func LoadStore(path string) (*Store, error) {
 }
 
 func SaveStore(path string, s *Store) error {
-	data, err := bson.Marshal(s)
+	data, err := bson.MarshalExtJSON(s, false, false)
 	if err != nil {
 		return fmt.Errorf("marshal store: %w", err)
 	}

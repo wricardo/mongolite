@@ -3,8 +3,8 @@ mongolite
 mongolite-cli
 
 # Data files
-*.db
-*.db.tmp
+mongolite.json
+*.json.tmp
 
 # IDE
 .idea/
