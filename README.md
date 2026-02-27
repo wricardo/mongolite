@@ -207,6 +207,7 @@ This is a development tool, not a production database.
 - No capped collections or TTL indexes
 - Entire dataset must fit in memory
 - Single-file storage means writes are serialized
+- No cursor pagination — all results are returned in the first batch
 
 ## Building
 
