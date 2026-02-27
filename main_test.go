@@ -327,7 +327,6 @@ func TestDoInsert_DocFile(t *testing.T) {
 		t.Fatalf("expected insertedId field, got %v", rows)
 	}
 
-	// Verify the doc was actually stored with correct content.
 	findOut, err := runWith(t, f, "find", "users")
 	if err != nil {
 		t.Fatal(err)
@@ -392,7 +391,6 @@ func TestDoUpdate_Single(t *testing.T) {
 		t.Fatalf("unexpected counts: %v", rows[0])
 	}
 
-	// Verify the change persisted — Alice is 31, Bob still 25.
 	findOut, err := runWith(t, f, "find", "users", "--filter", `{"name": "Alice"}`)
 	if err != nil {
 		t.Fatal(err)
@@ -468,7 +466,6 @@ func TestDoDelete_Single(t *testing.T) {
 		t.Fatalf("expected deletedCount=1, got %v", rows[0])
 	}
 
-	// Verify Bob remains
 	findOut, err := runWith(t, f, "find", "users")
 	if err != nil {
 		t.Fatal(err)
@@ -532,7 +529,6 @@ func TestDoAggregate_Group(t *testing.T) {
 		t.Fatalf("expected 2 groups, got %d: %v", len(rows), rows)
 	}
 
-	// Index by _id so order doesn't matter.
 	totals := map[string]float64{}
 	for _, r := range rows {
 		totals[r["_id"].(string)] = r["total"].(float64)
@@ -691,11 +687,14 @@ func TestRun_UnknownCommand(t *testing.T) {
 	}
 }
 
-func TestRun_NoCommand(t *testing.T) {
+func TestRun_NoCommand_PrintsHelp(t *testing.T) {
 	_, f := newTestEngine(t)
-	_, err := runWith(t, f)
-	if err == nil {
-		t.Fatal("expected error for no command")
+	out, err := runWith(t, f)
+	if err != nil {
+		t.Fatalf("expected no error for no-command (help), got %v", err)
+	}
+	if !strings.Contains(out, "Usage:") {
+		t.Fatalf("expected usage in output, got %q", out)
 	}
 }
 
