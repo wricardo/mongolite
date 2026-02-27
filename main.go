@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -11,37 +10,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/urfave/cli/v2"
 	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/wricardo/mongolite/internal/engine"
 	"github.com/wricardo/mongolite/internal/handler"
 	"github.com/wricardo/mongolite/internal/server"
 )
-
-const usage = `mongolite — MongoDB-compatible single-file database
-
-Usage:
-  mongolite [--file FILE] [--db DATABASE] <command> [flags]
-
-Global flags:
-  --file FILE    data file path (default: mongolite.json)
-  --db DATABASE  database name (default: test)
-
-Commands:
-  serve                    Start the MongoDB-compatible server (accepts --port)
-  find <collection>        [--filter JSON] [--sort JSON] [--limit N] [--skip N]
-  insert <collection>      (--doc JSON | --doc-file FILE)
-  insert-many <collection> (--docs JSON | --docs-file FILE)
-  update <collection>      (--filter JSON) (--update JSON) [--multi]
-  delete <collection>      (--filter JSON) [--multi]
-  aggregate <collection>   (--pipeline JSON | --pipeline-file FILE)
-  count <collection>       [--filter JSON]
-  list-dbs
-  list-collections
-  install-skill            Install the Claude Code skill to ~/.claude/skills/mongolite/
-
-Output: newline-delimited JSON (one document per line), suitable for piping to jq.
-`
 
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
@@ -51,147 +26,276 @@ func main() {
 }
 
 func run(args []string, w io.Writer) error {
-	gfs := flag.NewFlagSet("mongolite", flag.ContinueOnError)
-	gfs.SetOutput(io.Discard)
-	filePath := gfs.String("file", "mongolite.json", "data file path")
-	dbName := gfs.String("db", "test", "database name")
-	if err := gfs.Parse(args); err != nil {
-		return err
+	app := &cli.App{
+		Name:  "mongolite",
+		Usage: "MongoDB-compatible single-file database and CLI toolkit",
+		Description: `mongolite keeps MongoDB-style databases inside a single JSON file so agents and scripts can run a local datastore without provisioning a server.
+
+Use the CRUD/aggregation commands (find, insert, insert-many, update, delete, aggregate, count) to manipulate collections directly from the CLI. Inspect structure with list-dbs and list-collections, and manage schema metadata with set-schema/get-schema/delete-schema/list-schemas to document or validate expected shapes for each collection (describe every field you plan to persist so downstream agents can trust the contract—schemas should enumerate all expected keys, types, and constraints). All commands accept --file to point at the backing document store and --db to select the default database.
+
+Examples:
+- mongolite --file state.json insert tasks --doc '{"task_id":"123","status":"pending"}'
+- mongolite --file state.json find tasks --filter '{"status":"pending"}' --sort '{"created_at":1}'
+- mongolite --file state.json set-schema tasks --schema '{"bsonType":"object","required":["task_id"],"properties":{"task_id":{"bsonType":"string"},"status":{"enum":["pending","done"]}}}'`,
+		Writer:          w,
+		ErrWriter:       io.Discard,
+		HideHelpCommand: true,
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "file", Value: "mongolite.json", Usage: "data file path"},
+			&cli.StringFlag{Name: "db", Value: "test", Usage: "database name"},
+		},
+		Action: func(c *cli.Context) error {
+			if c.NArg() > 0 {
+				return fmt.Errorf("unknown command %q", c.Args().First())
+			}
+			return cli.ShowAppHelp(c)
+		},
+		Commands: []*cli.Command{
+			{
+				Name:  "serve",
+				Usage: "start the MongoDB-compatible server",
+				Flags: []cli.Flag{
+					&cli.IntFlag{Name: "port", Value: 27017, Usage: "TCP port to listen on"},
+				},
+				Action: func(c *cli.Context) error {
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("failed to initialize engine: %w", err)
+					}
+					h := handler.New(eng)
+					addr := fmt.Sprintf(":%d", c.Int("port"))
+					srv := server.New(addr, h)
+					log.Printf("mongolite server starting on %s (file: %s)", addr, c.String("file"))
+					return srv.ListenAndServe()
+				},
+			},
+			{
+				Name:  "find",
+				Usage: "query documents in a collection",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "filter", Value: "{}", Usage: "filter document (JSON)"},
+					&cli.StringFlag{Name: "filter-file", Usage: "filter document from file"},
+					&cli.StringFlag{Name: "sort", Usage: "sort document (JSON)"},
+					&cli.StringFlag{Name: "sort-file", Usage: "sort document from file"},
+					&cli.Int64Flag{Name: "limit", Usage: "max documents to return"},
+					&cli.Int64Flag{Name: "skip", Usage: "documents to skip"},
+				},
+				Action: func(c *cli.Context) error {
+					if c.NArg() == 0 {
+						return fmt.Errorf("find requires a collection name")
+					}
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doFind(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
+				},
+			},
+			{
+				Name:  "insert",
+				Usage: "insert a document into a collection",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "doc", Usage: "document (JSON)"},
+					&cli.StringFlag{Name: "doc-file", Usage: "document from file"},
+				},
+				Action: func(c *cli.Context) error {
+					if c.NArg() == 0 {
+						return fmt.Errorf("insert requires a collection name")
+					}
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doInsert(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
+				},
+			},
+			{
+				Name:  "insert-many",
+				Usage: "insert multiple documents into a collection",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "docs", Usage: "documents array (JSON)"},
+					&cli.StringFlag{Name: "docs-file", Usage: "documents array from file"},
+				},
+				Action: func(c *cli.Context) error {
+					if c.NArg() == 0 {
+						return fmt.Errorf("insert-many requires a collection name")
+					}
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doInsertMany(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
+				},
+			},
+			{
+				Name:  "update",
+				Usage: "update documents in a collection",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "filter", Value: "{}", Usage: "filter document (JSON)"},
+					&cli.StringFlag{Name: "filter-file", Usage: "filter document from file"},
+					&cli.StringFlag{Name: "update", Usage: "update document (JSON)"},
+					&cli.StringFlag{Name: "update-file", Usage: "update document from file"},
+					&cli.BoolFlag{Name: "multi", Usage: "update multiple documents"},
+				},
+				Action: func(c *cli.Context) error {
+					if c.NArg() == 0 {
+						return fmt.Errorf("update requires a collection name")
+					}
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doUpdate(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
+				},
+			},
+			{
+				Name:  "delete",
+				Usage: "delete documents from a collection",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "filter", Value: "{}", Usage: "filter document (JSON)"},
+					&cli.StringFlag{Name: "filter-file", Usage: "filter document from file"},
+					&cli.BoolFlag{Name: "multi", Usage: "delete multiple documents"},
+				},
+				Action: func(c *cli.Context) error {
+					if c.NArg() == 0 {
+						return fmt.Errorf("delete requires a collection name")
+					}
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doDelete(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
+				},
+			},
+			{
+				Name:  "aggregate",
+				Usage: "run an aggregation pipeline on a collection",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "pipeline", Usage: "pipeline array (JSON)"},
+					&cli.StringFlag{Name: "pipeline-file", Usage: "pipeline array from file"},
+				},
+				Action: func(c *cli.Context) error {
+					if c.NArg() == 0 {
+						return fmt.Errorf("aggregate requires a collection name")
+					}
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doAggregate(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
+				},
+			},
+			{
+				Name:  "count",
+				Usage: "count documents in a collection",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "filter", Value: "{}", Usage: "filter document (JSON)"},
+					&cli.StringFlag{Name: "filter-file", Usage: "filter document from file"},
+				},
+				Action: func(c *cli.Context) error {
+					if c.NArg() == 0 {
+						return fmt.Errorf("count requires a collection name")
+					}
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doCount(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
+				},
+			},
+			{
+				Name:  "list-dbs",
+				Usage: "list all databases",
+				Action: func(c *cli.Context) error {
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doListDbs(eng, c.App.Writer)
+				},
+			},
+			{
+				Name:  "list-collections",
+				Usage: "list collections in the database",
+				Action: func(c *cli.Context) error {
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doListCollections(eng, c.String("db"), c.App.Writer)
+				},
+			},
+			{
+				Name:  "set-schema",
+				Usage: "set schema for a collection",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "schema", Usage: "schema (JSON)"},
+					&cli.StringFlag{Name: "schema-file", Usage: "schema from file"},
+					&cli.StringFlag{Name: "description", Usage: "description text"},
+				},
+				Action: func(c *cli.Context) error {
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doSetSchema(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
+				},
+			},
+			{
+				Name:  "get-schema",
+				Usage: "get schema for a collection",
+				Action: func(c *cli.Context) error {
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doGetSchema(eng, c.String("db"), c.Args().First(), c.App.Writer)
+				},
+			},
+			{
+				Name:  "delete-schema",
+				Usage: "delete schema for a collection",
+				Action: func(c *cli.Context) error {
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doDeleteSchema(eng, c.String("db"), c.Args().First(), c.App.Writer)
+				},
+			},
+			{
+				Name:  "list-schemas",
+				Usage: "list all schemas",
+				Action: func(c *cli.Context) error {
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doListSchemas(eng, c.App.Writer)
+				},
+			},
+			{
+				Name:  "install-skill",
+				Usage: "install the Claude Code skill to ~/.claude/skills/mongolite/",
+				Action: func(c *cli.Context) error {
+					return installSkill()
+				},
+			},
+		},
 	}
-
-	remaining := gfs.Args()
-	if len(remaining) == 0 {
-		fmt.Fprint(w, usage)
-		return nil
-	}
-
-	cmd := remaining[0]
-	cmdArgs := remaining[1:]
-
-	switch cmd {
-	case "serve":
-		return runServe(*filePath, cmdArgs)
-	case "install-skill":
-		return installSkill()
-	case "find":
-		eng, err := engine.New(*filePath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", *filePath, err)
-		}
-		return doFind(eng, *dbName, cmdArgs, w)
-	case "insert":
-		eng, err := engine.New(*filePath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", *filePath, err)
-		}
-		return doInsert(eng, *dbName, cmdArgs, w)
-	case "insert-many":
-		eng, err := engine.New(*filePath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", *filePath, err)
-		}
-		return doInsertMany(eng, *dbName, cmdArgs, w)
-	case "update":
-		eng, err := engine.New(*filePath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", *filePath, err)
-		}
-		return doUpdate(eng, *dbName, cmdArgs, w)
-	case "delete":
-		eng, err := engine.New(*filePath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", *filePath, err)
-		}
-		return doDelete(eng, *dbName, cmdArgs, w)
-	case "aggregate":
-		eng, err := engine.New(*filePath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", *filePath, err)
-		}
-		return doAggregate(eng, *dbName, cmdArgs, w)
-	case "count":
-		eng, err := engine.New(*filePath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", *filePath, err)
-		}
-		return doCount(eng, *dbName, cmdArgs, w)
-	case "list-dbs":
-		eng, err := engine.New(*filePath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", *filePath, err)
-		}
-		return doListDbs(eng, w)
-	case "list-collections":
-		eng, err := engine.New(*filePath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", *filePath, err)
-		}
-		return doListCollections(eng, *dbName, w)
-	case "-h", "--help", "help":
-		fmt.Fprint(w, usage)
-		return nil
-	default:
-		return fmt.Errorf("unknown command %q\n\n%s", cmd, usage)
-	}
-}
-
-// --- serve ---
-
-func runServe(filePath string, args []string) error {
-	sfs := flag.NewFlagSet("serve", flag.ContinueOnError)
-	port := sfs.Int("port", 27017, "TCP port to listen on")
-	// --file can also be specified after serve, overriding the global one
-	file := sfs.String("file", filePath, "path to the data file")
-	if err := sfs.Parse(args); err != nil {
-		return err
-	}
-
-	eng, err := engine.New(*file)
-	if err != nil {
-		return fmt.Errorf("failed to initialize engine: %w", err)
-	}
-
-	h := handler.New(eng)
-	addr := fmt.Sprintf(":%d", *port)
-	srv := server.New(addr, h)
-
-	log.Printf("mongolite server starting on %s (file: %s)", addr, *file)
-	return srv.ListenAndServe()
+	return app.Run(append([]string{"mongolite"}, args...))
 }
 
 // --- CLI commands ---
 
-func extractCollection(args []string, cmdName string) (string, []string, error) {
-	if len(args) == 0 {
-		return "", nil, fmt.Errorf("%s requires a collection name", cmdName)
-	}
-	return args[0], args[1:], nil
-}
-
-func doFind(eng *engine.Engine, dbName string, args []string, w io.Writer) error {
-	collName, flagArgs, err := extractCollection(args, "find")
-	if err != nil {
-		return err
-	}
-
-	fs := flag.NewFlagSet("find", flag.ContinueOnError)
-	filter := fs.String("filter", "{}", "filter document (JSON)")
-	filterFile := fs.String("filter-file", "", "filter document from file")
-	sortSpec := fs.String("sort", "", "sort document (JSON)")
-	sortFile := fs.String("sort-file", "", "sort document from file")
-	limit := fs.Int64("limit", 0, "max documents to return")
-	skip := fs.Int64("skip", 0, "documents to skip")
-	if err := fs.Parse(flagArgs); err != nil {
-		return err
-	}
-
-	filterDoc, err := parseJSONArg(*filter, *filterFile)
+func doFind(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {
+	filterDoc, err := parseJSONArg(c.String("filter"), c.String("filter-file"))
 	if err != nil {
 		return err
 	}
 
 	var sortDoc bson.D
-	sortStr, err := readArg(*sortSpec, *sortFile)
+	sortStr, err := readArg(c.String("sort"), c.String("sort-file"))
 	if err != nil {
 		return err
 	}
@@ -201,7 +305,7 @@ func doFind(eng *engine.Engine, dbName string, args []string, w io.Writer) error
 		}
 	}
 
-	results, err := eng.Find(dbName, collName, filterDoc, sortDoc, *skip, *limit)
+	results, err := eng.Find(dbName, collName, filterDoc, sortDoc, c.Int64("skip"), c.Int64("limit"))
 	if err != nil {
 		return fmt.Errorf("find: %w", err)
 	}
@@ -213,20 +317,8 @@ func doFind(eng *engine.Engine, dbName string, args []string, w io.Writer) error
 	return nil
 }
 
-func doInsert(eng *engine.Engine, dbName string, args []string, w io.Writer) error {
-	collName, flagArgs, err := extractCollection(args, "insert")
-	if err != nil {
-		return err
-	}
-
-	fs := flag.NewFlagSet("insert", flag.ContinueOnError)
-	doc := fs.String("doc", "", "document (JSON)")
-	docFile := fs.String("doc-file", "", "document from file")
-	if err := fs.Parse(flagArgs); err != nil {
-		return err
-	}
-
-	docVal, err := parseJSONArg(*doc, *docFile)
+func doInsert(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {
+	docVal, err := parseJSONArg(c.String("doc"), c.String("doc-file"))
 	if err != nil {
 		return err
 	}
@@ -244,20 +336,8 @@ func doInsert(eng *engine.Engine, dbName string, args []string, w io.Writer) err
 	return nil
 }
 
-func doInsertMany(eng *engine.Engine, dbName string, args []string, w io.Writer) error {
-	collName, flagArgs, err := extractCollection(args, "insert-many")
-	if err != nil {
-		return err
-	}
-
-	fs := flag.NewFlagSet("insert-many", flag.ContinueOnError)
-	docs := fs.String("docs", "", "documents array (JSON)")
-	docsFile := fs.String("docs-file", "", "documents array from file")
-	if err := fs.Parse(flagArgs); err != nil {
-		return err
-	}
-
-	docsStr, err := readArg(*docs, *docsFile)
+func doInsertMany(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {
+	docsStr, err := readArg(c.String("docs"), c.String("docs-file"))
 	if err != nil {
 		return err
 	}
@@ -277,27 +357,12 @@ func doInsertMany(eng *engine.Engine, dbName string, args []string, w io.Writer)
 	return writeJSON(w, bson.D{{Key: "insertedCount", Value: len(ids)}})
 }
 
-func doUpdate(eng *engine.Engine, dbName string, args []string, w io.Writer) error {
-	collName, flagArgs, err := extractCollection(args, "update")
+func doUpdate(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {
+	filterDoc, err := parseJSONArg(c.String("filter"), c.String("filter-file"))
 	if err != nil {
 		return err
 	}
-
-	fs := flag.NewFlagSet("update", flag.ContinueOnError)
-	filter := fs.String("filter", "{}", "filter document (JSON)")
-	filterFile := fs.String("filter-file", "", "filter document from file")
-	update := fs.String("update", "", "update document (JSON)")
-	updateFile := fs.String("update-file", "", "update document from file")
-	multi := fs.Bool("multi", false, "update multiple documents")
-	if err := fs.Parse(flagArgs); err != nil {
-		return err
-	}
-
-	filterDoc, err := parseJSONArg(*filter, *filterFile)
-	if err != nil {
-		return err
-	}
-	updateDoc, err := parseJSONArg(*update, *updateFile)
+	updateDoc, err := parseJSONArg(c.String("update"), c.String("update-file"))
 	if err != nil {
 		return err
 	}
@@ -305,7 +370,7 @@ func doUpdate(eng *engine.Engine, dbName string, args []string, w io.Writer) err
 		return fmt.Errorf("update requires --update or --update-file")
 	}
 
-	matched, modified, _, err := eng.Update(dbName, collName, filterDoc, updateDoc, *multi, false)
+	matched, modified, _, err := eng.Update(dbName, collName, filterDoc, updateDoc, c.Bool("multi"), false)
 	if err != nil {
 		return fmt.Errorf("update: %w", err)
 	}
@@ -315,46 +380,21 @@ func doUpdate(eng *engine.Engine, dbName string, args []string, w io.Writer) err
 	})
 }
 
-func doDelete(eng *engine.Engine, dbName string, args []string, w io.Writer) error {
-	collName, flagArgs, err := extractCollection(args, "delete")
+func doDelete(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {
+	filterDoc, err := parseJSONArg(c.String("filter"), c.String("filter-file"))
 	if err != nil {
 		return err
 	}
 
-	fs := flag.NewFlagSet("delete", flag.ContinueOnError)
-	filter := fs.String("filter", "{}", "filter document (JSON)")
-	filterFile := fs.String("filter-file", "", "filter document from file")
-	multi := fs.Bool("multi", false, "delete multiple documents")
-	if err := fs.Parse(flagArgs); err != nil {
-		return err
-	}
-
-	filterDoc, err := parseJSONArg(*filter, *filterFile)
-	if err != nil {
-		return err
-	}
-
-	deleted, err := eng.Delete(dbName, collName, filterDoc, *multi)
+	deleted, err := eng.Delete(dbName, collName, filterDoc, c.Bool("multi"))
 	if err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
 	return writeJSON(w, bson.D{{Key: "deletedCount", Value: deleted}})
 }
 
-func doAggregate(eng *engine.Engine, dbName string, args []string, w io.Writer) error {
-	collName, flagArgs, err := extractCollection(args, "aggregate")
-	if err != nil {
-		return err
-	}
-
-	fs := flag.NewFlagSet("aggregate", flag.ContinueOnError)
-	pipeline := fs.String("pipeline", "", "pipeline array (JSON)")
-	pipelineFile := fs.String("pipeline-file", "", "pipeline array from file")
-	if err := fs.Parse(flagArgs); err != nil {
-		return err
-	}
-
-	pipelineStr, err := readArg(*pipeline, *pipelineFile)
+func doAggregate(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {
+	pipelineStr, err := readArg(c.String("pipeline"), c.String("pipeline-file"))
 	if err != nil {
 		return err
 	}
@@ -379,20 +419,8 @@ func doAggregate(eng *engine.Engine, dbName string, args []string, w io.Writer) 
 	return nil
 }
 
-func doCount(eng *engine.Engine, dbName string, args []string, w io.Writer) error {
-	collName, flagArgs, err := extractCollection(args, "count")
-	if err != nil {
-		return err
-	}
-
-	fs := flag.NewFlagSet("count", flag.ContinueOnError)
-	filter := fs.String("filter", "{}", "filter document (JSON)")
-	filterFile := fs.String("filter-file", "", "filter document from file")
-	if err := fs.Parse(flagArgs); err != nil {
-		return err
-	}
-
-	filterDoc, err := parseJSONArg(*filter, *filterFile)
+func doCount(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {
+	filterDoc, err := parseJSONArg(c.String("filter"), c.String("filter-file"))
 	if err != nil {
 		return err
 	}
@@ -416,6 +444,69 @@ func doListDbs(eng *engine.Engine, w io.Writer) error {
 func doListCollections(eng *engine.Engine, dbName string, w io.Writer) error {
 	for _, name := range eng.ListCollections(dbName) {
 		if err := writeJSON(w, bson.D{{Key: "name", Value: name}}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// --- schema commands ---
+
+func doSetSchema(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {
+	schStr, err := readArg(c.String("schema"), c.String("schema-file"))
+	if err != nil {
+		return err
+	}
+	description := c.String("description")
+	if schStr == "" && description == "" {
+		return fmt.Errorf("set-schema requires at least --schema, --schema-file, or --description")
+	}
+
+	var schemaJSON json.RawMessage
+	if schStr != "" {
+		schemaJSON = json.RawMessage(schStr)
+	}
+
+	if err := eng.SetSchema(dbName, collName, schemaJSON, description); err != nil {
+		return fmt.Errorf("set-schema: %w", err)
+	}
+	return writeJSON(w, bson.D{{Key: "ok", Value: 1}})
+}
+
+func doGetSchema(eng *engine.Engine, dbName, collName string, w io.Writer) error {
+	schemaJSON, description, err := eng.GetSchema(dbName, collName)
+	if err != nil {
+		return fmt.Errorf("get-schema: %w", err)
+	}
+	if schemaJSON == nil && description == "" {
+		return fmt.Errorf("no schema or description found for %s.%s", dbName, collName)
+	}
+
+	result := bson.D{{Key: "db", Value: dbName}, {Key: "collection", Value: collName}}
+	if schemaJSON != nil {
+		var schemaVal interface{}
+		if err := bson.UnmarshalExtJSON(schemaJSON, false, &schemaVal); err != nil {
+			return fmt.Errorf("parse schema: %w", err)
+		}
+		result = append(result, bson.E{Key: "schema", Value: schemaVal})
+	}
+	if description != "" {
+		result = append(result, bson.E{Key: "description", Value: description})
+	}
+	return writeDoc(w, result)
+}
+
+func doDeleteSchema(eng *engine.Engine, dbName, collName string, w io.Writer) error {
+	if err := eng.DeleteSchema(dbName, collName); err != nil {
+		return fmt.Errorf("delete-schema: %w", err)
+	}
+	return writeJSON(w, bson.D{{Key: "ok", Value: 1}})
+}
+
+func doListSchemas(eng *engine.Engine, w io.Writer) error {
+	docs := eng.ListSchemas()
+	for _, doc := range docs {
+		if err := writeDoc(w, doc); err != nil {
 			return err
 		}
 	}

@@ -114,6 +114,29 @@ mongolite --file mydata.json find users | jq '.name'
 mongolite --file mydata.json find users --filter '{"age": {"$gt": 25}}' | jq -c '{name, age}'
 ```
 
+### Schema Metadata
+
+Document expected fields so downstream agents know the contract for each collection. `set-schema` stores JSON schema + optional description alongside the data file, and `get-schema`, `delete-schema`, and `list-schemas` help you inspect or clean up that metadata. Enumerate every key, type, and constraint you rely on; partial schemas defeat the purpose.
+
+```bash
+# Define the structure of the tasks collection
+mongolite --file state.json set-schema tasks --schema '{
+  "bsonType": "object",
+  "required": ["task_id", "status"],
+  "properties": {
+    "task_id": {"bsonType": "string"},
+    "status": {"enum": ["pending", "done"]},
+    "vars": {"bsonType": "object"}
+  }
+}' --description "Workflow tasks tracked by the agent"
+
+# Read it back (ndjson output)
+mongolite --file state.json get-schema tasks
+
+# List all schemas stored in the file
+mongolite --file state.json list-schemas
+```
+
 ## Supported Operations
 
 ### CRUD
