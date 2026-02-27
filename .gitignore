@@ -1,6 +1,6 @@
 # Binary
-mongolite
-mongolite-cli
+/mongolitesrv
+/mongolite
 
 # Data files
 mongolite.json

@@ -1,7 +1,7 @@
 ---
 name: mongolite
 description: >
-  Use mongolite-cli to store, query, and update persistent state for AI agent workflows
+  Use mongolite to store, query, and update persistent state for AI agent workflows
   running in the mongolite project. Use this skill when an agent needs to: track task
   progress across steps, deduplicate work (seen URLs, processed IDs), checkpoint and
   resume after failure, accumulate results, maintain a task queue, or store any key-value
@@ -14,7 +14,7 @@ description: >
 ## Invocation
 
 ```bash
-go run ./cmd/mongolite-cli --file <state-file> --db agent [command]
+go run ./cmd/mongolite --file <state-file> --db agent [command]
 ```
 
 Use a dedicated file per workflow (e.g. `/tmp/my-workflow.json`). The file is created automatically on first write.
@@ -23,7 +23,7 @@ Use a dedicated file per workflow (e.g. `/tmp/my-workflow.json`). The file is cr
 
 ### Store a value (insert once)
 ```bash
-go run ./cmd/mongolite-cli --file state.json --db agent insert state \
+go run ./cmd/mongolite --file state.json --db agent insert state \
   --doc '{"_id": "job:config", "target": "https://example.com", "started_at": "2024-01-01"}'
 ```
 
@@ -31,26 +31,26 @@ Use a meaningful `_id` (e.g. `"task:42"`, `"seen:https://example.com"`, `"step:p
 
 ### Read state
 ```bash
-go run ./cmd/mongolite-cli --file state.json --db agent find state \
+go run ./cmd/mongolite --file state.json --db agent find state \
   --filter '{"_id": "job:config"}'
 ```
 
 ### Update state
 ```bash
-go run ./cmd/mongolite-cli --file state.json --db agent update state \
+go run ./cmd/mongolite --file state.json --db agent update state \
   --filter '{"_id": "step:parse"}' \
   --update '{"$set": {"status": "done", "result": "42 items"}}'
 ```
 
 ### Check existence (returns 0 or 1)
 ```bash
-go run ./cmd/mongolite-cli --file state.json --db agent count state \
+go run ./cmd/mongolite --file state.json --db agent count state \
   --filter '{"_id": "seen:https://example.com"}'
 ```
 
 ### Delete
 ```bash
-go run ./cmd/mongolite-cli --file state.json --db agent delete state \
+go run ./cmd/mongolite --file state.json --db agent delete state \
   --filter '{"_id": "step:parse"}'
 ```
 

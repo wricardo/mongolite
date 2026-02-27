@@ -36,7 +36,7 @@ client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017/
 A command-line client that operates directly on the data file — no server required:
 
 ```bash
-go run ./cmd/mongolite-cli [--file FILE] [--db DATABASE] <command> [args]
+go run ./cmd/mongolite [--file FILE] [--db DATABASE] <command> [args]
 ```
 
 Global flags:
@@ -47,24 +47,24 @@ Global flags:
 
 ```bash
 # Insert
-mongolite-cli --file mydata.json insert users --doc '{"name": "Alice", "age": 30}'
-mongolite-cli --file mydata.json insert-many users --docs '[{"name": "Bob"}, {"name": "Charlie"}]'
+mongolite --file mydata.json insert users --doc '{"name": "Alice", "age": 30}'
+mongolite --file mydata.json insert-many users --docs '[{"name": "Bob"}, {"name": "Charlie"}]'
 
 # Query
-mongolite-cli --file mydata.json find users
-mongolite-cli --file mydata.json find users --filter '{"age": {"$gt": 25}}' --sort '{"age": -1}' --limit 10
-mongolite-cli --file mydata.json count users --filter '{"status": "active"}'
+mongolite --file mydata.json find users
+mongolite --file mydata.json find users --filter '{"age": {"$gt": 25}}' --sort '{"age": -1}' --limit 10
+mongolite --file mydata.json count users --filter '{"status": "active"}'
 
 # Update & Delete
-mongolite-cli --file mydata.json update users --filter '{"name": "Alice"}' --update '{"$set": {"age": 31}}'
-mongolite-cli --file mydata.json delete users --filter '{"name": "Bob"}'
+mongolite --file mydata.json update users --filter '{"name": "Alice"}' --update '{"$set": {"age": 31}}'
+mongolite --file mydata.json delete users --filter '{"name": "Bob"}'
 
 # Aggregation
-mongolite-cli --file mydata.json aggregate users --pipeline '[{"$group": {"_id": "$city", "count": {"$sum": 1}}}]'
+mongolite --file mydata.json aggregate users --pipeline '[{"$group": {"_id": "$city", "count": {"$sum": 1}}}]'
 
 # Admin
-mongolite-cli --file mydata.json list-dbs
-mongolite-cli --file mydata.json list-collections
+mongolite --file mydata.json list-dbs
+mongolite --file mydata.json list-collections
 ```
 
 ### File Input
@@ -73,7 +73,7 @@ For complex JSON, write it to a file and use `--*-file` flags:
 
 ```bash
 echo '{"age": {"$gt": 25}, "status": {"$in": ["active", "pending"]}}' > filter.json
-mongolite-cli --file mydata.json find users --filter-file filter.json
+mongolite --file mydata.json find users --filter-file filter.json
 ```
 
 ### Output
@@ -81,8 +81,8 @@ mongolite-cli --file mydata.json find users --filter-file filter.json
 All output is newline-delimited JSON (ndjson), one document per line — pipe directly to `jq`:
 
 ```bash
-mongolite-cli --file mydata.json find users | jq '.name'
-mongolite-cli --file mydata.json find users --filter '{"age": {"$gt": 25}}' | jq -c '{name, age}'
+mongolite --file mydata.json find users | jq '.name'
+mongolite --file mydata.json find users --filter '{"age": {"$gt": 25}}' | jq -c '{name, age}'
 ```
 
 ## Supported Operations
@@ -126,30 +126,30 @@ mongolite works well as a local state store for multi-step AI agent workflows. A
 
 ```bash
 # Step 1: create a task
-mongolite-cli --file agent.json insert tasks --doc '{"task_id": "abc", "status": "pending", "step": 1, "vars": {"url": "https://example.com"}}'
+mongolite --file agent.json insert tasks --doc '{"task_id": "abc", "status": "pending", "step": 1, "vars": {"url": "https://example.com"}}'
 
 # Step 2: read current state
-mongolite-cli --file agent.json find tasks --filter '{"task_id": "abc"}' | jq '.vars'
+mongolite --file agent.json find tasks --filter '{"task_id": "abc"}' | jq '.vars'
 
 # Step 3: update after completing a step
-mongolite-cli --file agent.json update tasks --filter '{"task_id": "abc"}' --update '{"$set": {"step": 2, "status": "in_progress", "vars.result": "fetched"}}'
+mongolite --file agent.json update tasks --filter '{"task_id": "abc"}' --update '{"$set": {"step": 2, "status": "in_progress", "vars.result": "fetched"}}'
 ```
 
 ### Step queue / control flow
 
 ```bash
 # Enqueue steps
-mongolite-cli --file agent.json insert-many steps --docs '[
+mongolite --file agent.json insert-many steps --docs '[
   {"order": 1, "action": "fetch", "done": false},
   {"order": 2, "action": "parse", "done": false},
   {"order": 3, "action": "summarize", "done": false}
 ]'
 
 # Get next pending step
-mongolite-cli --file agent.json find steps --filter '{"done": false}' --sort '{"order": 1}' --limit 1
+mongolite --file agent.json find steps --filter '{"done": false}' --sort '{"order": 1}' --limit 1
 
 # Mark done
-mongolite-cli --file agent.json update steps --filter '{"order": 1}' --update '{"$set": {"done": true, "result": "ok"}}'
+mongolite --file agent.json update steps --filter '{"order": 1}' --update '{"$set": {"done": true, "result": "ok"}}'
 ```
 
 ### From Go code
@@ -168,7 +168,7 @@ var state TaskState
 coll.FindOne(ctx, bson.M{"task_id": taskID}).Decode(&state)
 ```
 
-The advantage over a plain JSON file: you get query/filter/update semantics instead of read-modify-write-entire-file. Shell scripts (via `mongolite-cli`) and Go/Python/Node code can all hit the same data store. The data file persists across restarts, so an agent can crash and resume from its last saved state.
+The advantage over a plain JSON file: you get query/filter/update semantics instead of read-modify-write-entire-file. Shell scripts (via `mongolite`) and Go/Python/Node code can all hit the same data store. The data file persists across restarts, so an agent can crash and resume from its last saved state.
 
 ## Architecture
 
@@ -216,7 +216,7 @@ This is a development tool, not a production database.
 go build -o mongolite .
 
 # CLI
-go build -o mongolite-cli ./cmd/mongolite-cli
+go build -o mongolite ./cmd/mongolite
 ```
 
 ## License
