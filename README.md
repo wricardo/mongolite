@@ -1,24 +1,52 @@
 # mongolite
 
-A lightweight MongoDB-compatible server that stores all data in a single file. Think SQLite, but for MongoDB.
+A lightweight MongoDB-compatible database that stores all data in a single JSON file. Think SQLite, but for MongoDB.
 
-mongolite implements the MongoDB wire protocol so any standard MongoDB client or driver can connect to it directly — no configuration changes needed beyond the connection string.
+mongolite ships as one binary with two modes:
+
+- **CLI** — read and write the data file directly, no server needed
+- **Server** — implements the MongoDB wire protocol so any standard MongoDB client or driver can connect
 
 ## Why?
 
-- **No MongoDB installation required.** Run `go run .` and you have a working MongoDB-compatible server.
+- **No MongoDB installation required.** A single Go binary is all you need.
 - **Single-file storage.** All data lives in one JSON file. Human-readable, diffable, committable.
 - **Zero dependencies at runtime.** Pure Go, no external services.
-- **Drop-in replacement for development.** Use the same driver code you'd use with a real MongoDB instance.
+- **Drop-in for development.** Use the same driver code you'd use with a real MongoDB instance.
+
+## Installation
+
+```bash
+go install github.com/wricardo/mongolite@latest
+
+# Install the Claude Code skill (for AI agent workflows)
+mongolite install-skill
+```
+
+Or with Make:
+
+```bash
+make install          # installs the binary
+make install-skill    # installs binary + Claude Code skill
+```
 
 ## Quick Start
 
+### CLI (no server required)
+
+```bash
+mongolite --file mydata.json insert users --doc '{"name": "Alice", "age": 30}'
+mongolite --file mydata.json find users --filter '{"age": {"$gt": 25}}'
+```
+
+### Server mode
+
 ```bash
 # Start the server (default port 27017, data file mongolite.json)
-go run .
+mongolite serve
 
-# Or with custom options
-go run . --port 27018 --file mydata.json
+# With custom options
+mongolite serve --port 27018 --file mydata.json
 ```
 
 Connect with any MongoDB client:
@@ -31,12 +59,10 @@ mongosh mongodb://localhost:27017
 client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017/?directConnection=true"))
 ```
 
-## CLI Client
-
-A command-line client that operates directly on the data file — no server required:
+## CLI Reference
 
 ```bash
-go run ./cmd/mongolite [--file FILE] [--db DATABASE] <command> [args]
+mongolite [--file FILE] [--db DATABASE] <command> [flags]
 ```
 
 Global flags:
@@ -65,6 +91,9 @@ mongolite --file mydata.json aggregate users --pipeline '[{"$group": {"_id": "$c
 # Admin
 mongolite --file mydata.json list-dbs
 mongolite --file mydata.json list-collections
+
+# Server
+mongolite serve [--port PORT] [--file FILE]
 ```
 
 ### File Input
@@ -120,7 +149,7 @@ mongolite --file mydata.json find users --filter '{"age": {"$gt": 25}}' | jq -c 
 
 ## Use Case: Agent State Persistence
 
-mongolite works well as a local state store for multi-step AI agent workflows. Any MongoDB driver connects to it, so you can persist task state, variables, and control flow between steps without running a real database.
+mongolite works well as a local state store for multi-step AI agent workflows. The CLI operates directly on the file — no server process needed. Shell scripts, Go, Python, and Node code can all share the same data file.
 
 ### Task state tracking
 
@@ -152,7 +181,7 @@ mongolite --file agent.json find steps --filter '{"done": false}' --sort '{"orde
 mongolite --file agent.json update steps --filter '{"order": 1}' --update '{"$set": {"done": true, "result": "ok"}}'
 ```
 
-### From Go code
+### From Go code (via server)
 
 ```go
 client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017/?directConnection=true"))
@@ -168,29 +197,31 @@ var state TaskState
 coll.FindOne(ctx, bson.M{"task_id": taskID}).Decode(&state)
 ```
 
-The advantage over a plain JSON file: you get query/filter/update semantics instead of read-modify-write-entire-file. Shell scripts (via `mongolite`) and Go/Python/Node code can all hit the same data store. The data file persists across restarts, so an agent can crash and resume from its last saved state.
-
 ## Architecture
 
+mongolite has two access paths that share the same storage engine:
+
 ```
-MongoDB Client
-      │
-      ▼
-  TCP Listener (internal/server)
-      │
-      ▼
-  Wire Protocol Parser (internal/proto)
-      │  Reads OP_MSG / OP_QUERY frames
-      ▼
-  Command Handler (internal/handler)
-      │  Dispatches to insert/find/update/delete/aggregate/...
-      ▼
-  Storage Engine (internal/engine)
-      │  In-memory store protected by RWMutex
-      │  Filter matching, update operators, aggregation pipeline
-      ▼
-  JSON File (mongolite.json)
-      Atomic writes via temp file + rename
+  CLI mode (direct file access)        Server mode (wire protocol)
+  ─────────────────────────────        ───────────────────────────
+  mongolite <command> --file F         MongoDB Client
+             │                                  │
+             │                         TCP Listener (internal/server)
+             │                                  │
+             │                         Wire Protocol Parser (internal/proto)
+             │                           Reads OP_MSG / OP_QUERY frames
+             │                                  │
+             │                         Command Handler (internal/handler)
+             │                           Dispatches insert/find/update/...
+             └──────────────────────────────────┘
+                                        │
+                               Storage Engine (internal/engine)
+                                 In-memory store, RWMutex,
+                                 filter matching, update operators,
+                                 aggregation pipeline
+                                        │
+                               JSON File (mongolite.json)
+                                 Atomic writes via temp file + rename
 ```
 
 - **Storage:** All data is held in memory and persisted to a single JSON file on every write. Writes are atomic (write to `.tmp`, then `os.Rename`). The file uses MongoDB Extended JSON format — human-readable and git-diffable.
@@ -212,11 +243,16 @@ This is a development tool, not a production database.
 ## Building
 
 ```bash
-# Server
-go build -o mongolite .
+make build          # build ./mongolite
+make install        # go install
+make install-skill  # install binary + Claude Code skill
+make test           # run tests
+```
 
-# CLI
-go build -o mongolite ./cmd/mongolite
+Or directly:
+
+```bash
+go build -o mongolite .
 ```
 
 ## License
