@@ -42,25 +42,7 @@ mongolite --file mydata.json insert users --doc '{"name": "Alice", "age": 30}'
 mongolite --file mydata.json find users --filter '{"age": {"$gt": 25}}'
 ```
 
-### Server mode
-
-```bash
-# Start the server (default port 27017, data file mongolite.json)
-mongolite serve
-
-# With custom options
-mongolite serve --port 27018 --file mydata.json
-```
-
-Connect with any MongoDB client:
-
-```bash
-# mongosh
-mongosh mongodb://localhost:27017
-
-# Go driver
-client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017/?directConnection=true"))
-```
+Most users stay in this happy path: point `--file` at a JSON datastore and run insert/find/update/delete directly. If you later need driver compatibility, see [Server Mode](#server-mode-optional).
 
 ## CLI Reference
 
@@ -95,8 +77,6 @@ mongolite --file mydata.json aggregate users --pipeline '[{"$group": {"_id": "$c
 mongolite --file mydata.json list-dbs
 mongolite --file mydata.json list-collections
 
-# Server
-mongolite serve [--port PORT] [--file FILE]
 ```
 
 ### File Input
@@ -207,7 +187,29 @@ mongolite --file agent.json find steps --filter '{"done": false}' --sort '{"orde
 mongolite --file agent.json update steps --filter '{"order": 1}' --update '{"$set": {"done": true, "result": "ok"}}'
 ```
 
-### From Go code (via server)
+## Server Mode (optional)
+
+Need driver compatibility or remote access? Launch the lightweight server that mimics MongoDB wire operations while still persisting to the same single JSON file.
+
+```bash
+# Start the server (default port 27017, data file mongolite.json)
+mongolite serve
+
+# With custom options
+mongolite serve --port 27018 --file mydata.json
+```
+
+Connect using standard tools:
+
+```bash
+# mongosh
+mongosh mongodb://localhost:27017
+
+# Any driver (example: Go)
+client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017/?directConnection=true"))
+```
+
+Once connected, treat it like a MongoDB instance—ideal when an agent step must reuse existing driver code:
 
 ```go
 client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017/?directConnection=true"))
