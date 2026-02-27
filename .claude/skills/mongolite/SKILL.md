@@ -17,13 +17,15 @@ description: >
 mongolite --file <state-file> --db agent [command]
 ```
 
+- `--file` defaults to `./mongolite.json` in the current directory if omitted.
+- Use a dedicated file per workflow (e.g. `/tmp/my-workflow.json`). The file is created automatically on first write.
+- Argument order is flexible: `insert tasks --doc '...'` and `insert --doc '...' tasks` both work.
+
 If `mongolite` is not on PATH, install it first:
 
 ```bash
 go install github.com/wricardo/mongolite@latest
 ```
-
-Use a dedicated file per workflow (e.g. `/tmp/my-workflow.json`). The file is created automatically on first write.
 
 ## Core patterns
 
@@ -66,6 +68,26 @@ The `update` command does **not** support `--upsert`. To create-or-update:
 1. `count` to check if the doc exists
 2. If 0 → `insert`; if 1 → `update`
 
+## Schema metadata
+
+Use `set-schema` to document the expected shape of a collection. Do this when you create a new collection so other agents can understand the data contract.
+
+```bash
+mongolite --file state.json --db agent set-schema tasks \
+  --schema '{
+    "bsonType": "object",
+    "required": ["_id", "status"],
+    "properties": {
+      "_id":    {"bsonType": "string"},
+      "status": {"enum": ["pending", "done"]},
+      "result": {"bsonType": "string"}
+    }
+  }' \
+  --description "Task queue entries for the fetch workflow"
+```
+
+Read it back with `get-schema tasks`, list all with `list-schemas`.
+
 ## Common agent workflows
 
 See [references/patterns.md](references/patterns.md) for:
@@ -73,5 +95,7 @@ See [references/patterns.md](references/patterns.md) for:
 - Deduplication / seen-set
 - Checkpoint / resume
 - Result accumulation
+- Key-value store
+- Numeric counter
 
 See [references/commands.md](references/commands.md) for full flag reference and all supported operators.

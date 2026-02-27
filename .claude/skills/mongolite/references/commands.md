@@ -2,7 +2,7 @@
 
 ## Global flags
 ```
---file FILE    data file path (default: mongolite.json)
+--file FILE    data file path (default: ./mongolite.json)
 --db DATABASE  database name (default: test)
 ```
 
@@ -60,6 +60,16 @@ Output: ndjson
 list-dbs
 list-collections
 ```
+
+### set-schema / get-schema / delete-schema / list-schemas
+```
+set-schema <collection> [--schema JSON] [--schema-file FILE] [--description TEXT]
+get-schema <collection>
+delete-schema <collection>
+list-schemas
+```
+Output of `get-schema`: `{"db":..., "collection":..., "schema":..., "description":...}`
+Output of `list-schemas`: ndjson, one schema entry per line.
 
 ## Query operators
 `$eq` `$ne` `$gt` `$gte` `$lt` `$lte` `$in` `$nin` `$exists` `$type`

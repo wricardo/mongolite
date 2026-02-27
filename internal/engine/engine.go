@@ -1,11 +1,168 @@
 package engine
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
+
+// SetSchema upserts a schema (and optional description) for a db+collection pair.
+// coll may be empty to set a db-level description without a collection schema.
+func (e *Engine) SetSchema(db, coll string, schema json.RawMessage, description string) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	c := e.data.GetOrCreateDB(schemaInternalDB).GetOrCreateColl(schemaInternalColl)
+
+	// Find an existing entry matching db+collection
+	for i, doc := range c.Documents {
+		dbVal, _ := GetField(doc, "db")
+		collVal, _ := GetField(doc, "collection")
+		dbStr, _ := dbVal.(string)
+		collStr, _ := collVal.(string)
+		if dbStr == db && collStr == coll {
+			// Update in-place: rebuild the doc preserving _id
+			id, _ := GetField(doc, "_id")
+			newDoc := bson.D{{Key: "_id", Value: id}, {Key: "db", Value: db}, {Key: "collection", Value: coll}}
+			if schema != nil {
+				var schemaVal interface{}
+				if err := bson.UnmarshalExtJSON(schema, false, &schemaVal); err != nil {
+					return fmt.Errorf("parse schema JSON: %w", err)
+				}
+				newDoc = append(newDoc, bson.E{Key: "schema", Value: schemaVal})
+			}
+			if description != "" {
+				newDoc = append(newDoc, bson.E{Key: "description", Value: description})
+			}
+			c.Documents[i] = newDoc
+			return e.save()
+		}
+	}
+
+	// New entry
+	newDoc := bson.D{{Key: "db", Value: db}, {Key: "collection", Value: coll}}
+	if schema != nil {
+		var schemaVal interface{}
+		if err := bson.UnmarshalExtJSON(schema, false, &schemaVal); err != nil {
+			return fmt.Errorf("parse schema JSON: %w", err)
+		}
+		newDoc = append(newDoc, bson.E{Key: "schema", Value: schemaVal})
+	}
+	if description != "" {
+		newDoc = append(newDoc, bson.E{Key: "description", Value: description})
+	}
+	newDoc = ensureID(newDoc)
+	c.Documents = append(c.Documents, newDoc)
+	return e.save()
+}
+
+// GetSchema returns the schema JSON and description for a db+collection pair.
+// coll may be empty for db-level entries. Returns nil schema if not found.
+func (e *Engine) GetSchema(db, coll string) (json.RawMessage, string, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.getSchemaAndDescLocked(db, coll)
+}
+
+// DeleteSchema removes the schema entry for a db+collection pair.
+func (e *Engine) DeleteSchema(db, coll string) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	schDB := e.data.Databases[schemaInternalDB]
+	if schDB == nil {
+		return nil
+	}
+	schColl := schDB.Collections[schemaInternalColl]
+	if schColl == nil {
+		return nil
+	}
+
+	var kept []bson.D
+	deleted := false
+	for _, doc := range schColl.Documents {
+		dbVal, _ := GetField(doc, "db")
+		collVal, _ := GetField(doc, "collection")
+		dbStr, _ := dbVal.(string)
+		collStr, _ := collVal.(string)
+		if dbStr == db && collStr == coll {
+			deleted = true
+			continue
+		}
+		kept = append(kept, doc)
+	}
+	if deleted {
+		schColl.Documents = kept
+		return e.save()
+	}
+	return nil
+}
+
+// ListSchemas returns all schema documents.
+func (e *Engine) ListSchemas() []bson.D {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	schDB := e.data.Databases[schemaInternalDB]
+	if schDB == nil {
+		return nil
+	}
+	schColl := schDB.Collections[schemaInternalColl]
+	if schColl == nil {
+		return nil
+	}
+	result := make([]bson.D, len(schColl.Documents))
+	copy(result, schColl.Documents)
+	return result
+}
+
+// getSchemaLocked returns the schema JSON for a db+collection pair.
+// Must be called while the engine lock is held.
+func (e *Engine) getSchemaLocked(db, coll string) (json.RawMessage, error) {
+	schema, _, err := e.getSchemaAndDescLocked(db, coll)
+	return schema, err
+}
+
+// getSchemaAndDescLocked returns schema JSON and description for a db+collection pair.
+// Must be called while the engine lock is held.
+func (e *Engine) getSchemaAndDescLocked(db, coll string) (json.RawMessage, string, error) {
+	schDB := e.data.Databases[schemaInternalDB]
+	if schDB == nil {
+		return nil, "", nil
+	}
+	schColl := schDB.Collections[schemaInternalColl]
+	if schColl == nil {
+		return nil, "", nil
+	}
+	for _, doc := range schColl.Documents {
+		dbVal, _ := GetField(doc, "db")
+		collVal, _ := GetField(doc, "collection")
+		dbStr, _ := dbVal.(string)
+		collStr, _ := collVal.(string)
+		if dbStr == db && collStr == coll {
+			var schemaJSON json.RawMessage
+			schemaVal, hasSchema := GetField(doc, "schema")
+			if hasSchema && schemaVal != nil {
+				raw, err := bson.MarshalExtJSON(bson.D{{Key: "v", Value: schemaVal}}, false, false)
+				if err != nil {
+					return nil, "", fmt.Errorf("marshal schema: %w", err)
+				}
+				// Extract the value of "v" from {"v": ...}
+				var wrapper map[string]json.RawMessage
+				if err := json.Unmarshal(raw, &wrapper); err != nil {
+					return nil, "", fmt.Errorf("unwrap schema: %w", err)
+				}
+				schemaJSON = wrapper["v"]
+			}
+			desc, _ := GetField(doc, "description")
+			descStr, _ := desc.(string)
+			return schemaJSON, descStr, nil
+		}
+	}
+	return nil, "", nil
+}
 
 type Engine struct {
 	mu       sync.RWMutex
@@ -41,6 +198,19 @@ func (e *Engine) Insert(db, coll string, docs []bson.D) ([]interface{}, error) {
 		if err := CheckUniqueIndex(c.Documents, c.Indexes, doc); err != nil {
 			return nil, err
 		}
+
+		if db != schemaInternalDB {
+			schema, err := e.getSchemaLocked(db, coll)
+			if err != nil {
+				return nil, err
+			}
+			if schema != nil {
+				if err := ValidateDocAgainstSchema(schema, doc); err != nil {
+					return nil, err
+				}
+			}
+		}
+
 		c.Documents = append(c.Documents, doc)
 	}
 
@@ -101,6 +271,17 @@ func (e *Engine) Update(db, coll string, filter, update bson.D, multi, upsert bo
 		if err != nil {
 			return matched, modified, nil, err
 		}
+		if db != schemaInternalDB {
+			schema, err := e.getSchemaLocked(db, coll)
+			if err != nil {
+				return matched, modified, nil, err
+			}
+			if schema != nil {
+				if err := ValidateDocAgainstSchema(schema, updated); err != nil {
+					return matched, modified, nil, err
+				}
+			}
+		}
 		c.Documents[i] = updated
 		modified++
 		if !multi {
@@ -124,6 +305,17 @@ func (e *Engine) Update(db, coll string, filter, update bson.D, multi, upsert bo
 			return 0, 0, nil, err
 		}
 		newDoc = ensureID(newDoc)
+		if db != schemaInternalDB {
+			schema, err := e.getSchemaLocked(db, coll)
+			if err != nil {
+				return 0, 0, nil, err
+			}
+			if schema != nil {
+				if err := ValidateDocAgainstSchema(schema, newDoc); err != nil {
+					return 0, 0, nil, err
+				}
+			}
+		}
 		upsertedID, _ = GetField(newDoc, "_id")
 		c.Documents = append(c.Documents, newDoc)
 	}
@@ -301,13 +493,16 @@ func (e *Engine) Aggregate(db, coll string, pipeline []bson.D) ([]bson.D, error)
 	return RunPipeline(docs, pipeline, lookupFn)
 }
 
-// ListDatabases returns all database names.
+// ListDatabases returns all database names, excluding internal namespaces.
 func (e *Engine) ListDatabases() []string {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
 	var names []string
 	for name := range e.data.Databases {
+		if name == schemaInternalDB {
+			continue
+		}
 		names = append(names, name)
 	}
 	return names

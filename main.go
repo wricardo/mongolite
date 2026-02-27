@@ -41,7 +41,7 @@ Examples:
 		ErrWriter:       io.Discard,
 		HideHelpCommand: true,
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "file", Value: "mongolite.json", Usage: "data file path"},
+			&cli.StringFlag{Name: "file", Value: "./mongolite.json", Usage: "data file path"},
 			&cli.StringFlag{Name: "db", Value: "test", Usage: "database name"},
 		},
 		Action: func(c *cli.Context) error {
@@ -283,7 +283,71 @@ Examples:
 			},
 		},
 	}
-	return app.Run(append([]string{"mongolite"}, args...))
+	return app.Run(append([]string{"mongolite"}, normalizeArgs(args)...))
+}
+
+// normalizeArgs allows the natural "command collection --flags" ordering in
+// addition to the urfave/cli-native "command --flags collection" ordering.
+// If the first arg after the subcommand is a non-flag token and subsequent
+// args contain flags, the non-flag token is moved to the end so the flag
+// parser sees flags before the positional collection argument.
+func normalizeArgs(args []string) []string {
+	// Global flags that consume the next token as their value.
+	globalFlagsWithValue := map[string]bool{"file": true, "db": true}
+
+	i := 0
+	result := make([]string, 0, len(args))
+
+	// Collect global flags until we hit the subcommand.
+	for i < len(args) {
+		arg := args[i]
+		if !strings.HasPrefix(arg, "-") {
+			break
+		}
+		flagName := strings.TrimLeft(arg, "-")
+		// --flag=value: single token, no look-ahead needed.
+		if strings.Contains(flagName, "=") {
+			result = append(result, arg)
+			i++
+			continue
+		}
+		// --flag value: consume both tokens.
+		if globalFlagsWithValue[flagName] && i+1 < len(args) {
+			result = append(result, arg, args[i+1])
+			i += 2
+			continue
+		}
+		result = append(result, arg)
+		i++
+	}
+
+	if i >= len(args) {
+		return result
+	}
+
+	// Append the subcommand.
+	result = append(result, args[i])
+	i++
+
+	rest := args[i:]
+	if len(rest) == 0 {
+		return result
+	}
+
+	// Detect old syntax: non-flag first, flags following.
+	// Move the non-flag token (collection name) to the end.
+	if !strings.HasPrefix(rest[0], "-") {
+		for _, a := range rest[1:] {
+			if strings.HasPrefix(a, "-") {
+				result = append(result, rest[1:]...)
+				result = append(result, rest[0])
+				return result
+			}
+		}
+	}
+
+	result = append(result, rest...)
+	return result
 }
 
 // --- CLI commands ---

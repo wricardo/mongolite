@@ -127,22 +127,6 @@ func TestParseJSONArg_BadJSON(t *testing.T) {
 	}
 }
 
-// --- extractCollection ---
-
-func TestExtractCollection_OK(t *testing.T) {
-	name, rest, err := extractCollection([]string{"users", "--filter", "{}"}, "find")
-	if err != nil || name != "users" || len(rest) != 2 {
-		t.Fatalf("got %q %v %v", name, rest, err)
-	}
-}
-
-func TestExtractCollection_Empty(t *testing.T) {
-	_, _, err := extractCollection([]string{}, "find")
-	if err == nil {
-		t.Fatal("expected error for empty args")
-	}
-}
-
 // --- doFind ---
 
 func TestDoFind_Empty(t *testing.T) {
@@ -180,7 +164,7 @@ func TestDoFind_Filter(t *testing.T) {
 		{{Key: "name", Value: "Bob"}, {Key: "age", Value: int32(20)}},
 	})
 
-	out, err := runWith(t, f, "find", "users", "--filter", `{"age": {"$gt": 25}}`)
+	out, err := runWith(t, f, "find", "--filter", `{"age": {"$gt": 25}}`, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,7 +182,7 @@ func TestDoFind_Limit(t *testing.T) {
 		{{Key: "n", Value: int32(3)}},
 	})
 
-	out, err := runWith(t, f, "find", "items", "--limit", "2")
+	out, err := runWith(t, f, "find", "--limit", "2", "items")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +200,7 @@ func TestDoFind_Skip(t *testing.T) {
 		{{Key: "n", Value: int32(3)}},
 	})
 
-	out, err := runWith(t, f, "find", "items", "--skip", "2")
+	out, err := runWith(t, f, "find", "--skip", "2", "items")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +217,7 @@ func TestDoFind_Sort(t *testing.T) {
 		{{Key: "name", Value: "Alice"}, {Key: "age", Value: int32(30)}},
 	})
 
-	out, err := runWith(t, f, "find", "users", "--sort", `{"age": 1}`)
+	out, err := runWith(t, f, "find", "--sort", `{"age": 1}`, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +237,7 @@ func TestDoFind_FilterFile(t *testing.T) {
 	filterFile := filepath.Join(t.TempDir(), "filter.json")
 	os.WriteFile(filterFile, []byte(`{"status": "active"}`), 0644)
 
-	out, err := runWith(t, f, "find", "users", "--filter-file", filterFile)
+	out, err := runWith(t, f, "find", "--filter-file", filterFile, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +265,7 @@ func TestDoFind_MissingCollection(t *testing.T) {
 
 func TestDoInsert_OK(t *testing.T) {
 	_, f := newTestEngine(t)
-	out, err := runWith(t, f, "insert", "users", "--doc", `{"name": "Alice"}`)
+	out, err := runWith(t, f, "insert", "--doc", `{"name": "Alice"}`, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +277,7 @@ func TestDoInsert_OK(t *testing.T) {
 
 func TestDoInsert_PersistsToFile(t *testing.T) {
 	_, f := newTestEngine(t)
-	runWith(t, f, "insert", "users", "--doc", `{"name": "Alice"}`)
+	runWith(t, f, "insert", "--doc", `{"name": "Alice"}`, "users")
 
 	out, err := runWith(t, f, "find", "users")
 	if err != nil {
@@ -318,7 +302,7 @@ func TestDoInsert_DocFile(t *testing.T) {
 	docFile := filepath.Join(t.TempDir(), "doc.json")
 	os.WriteFile(docFile, []byte(`{"name": "Bob"}`), 0644)
 
-	out, err := runWith(t, f, "insert", "users", "--doc-file", docFile)
+	out, err := runWith(t, f, "insert", "--doc-file", docFile, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +325,7 @@ func TestDoInsert_DocFile(t *testing.T) {
 
 func TestDoInsertMany_OK(t *testing.T) {
 	_, f := newTestEngine(t)
-	out, err := runWith(t, f, "insert-many", "users", "--docs", `[{"name":"A"},{"name":"B"},{"name":"C"}]`)
+	out, err := runWith(t, f, "insert-many", "--docs", `[{"name":"A"},{"name":"B"},{"name":"C"}]`, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -364,7 +348,7 @@ func TestDoInsertMany_MissingDocs(t *testing.T) {
 
 func TestDoInsertMany_BadJSON(t *testing.T) {
 	_, f := newTestEngine(t)
-	_, err := runWith(t, f, "insert-many", "users", "--docs", `not json`)
+	_, err := runWith(t, f, "insert-many", "--docs", `not json`, "users")
 	if err == nil {
 		t.Fatal("expected parse error")
 	}
@@ -379,9 +363,10 @@ func TestDoUpdate_Single(t *testing.T) {
 		{{Key: "name", Value: "Bob"}, {Key: "age", Value: int32(25)}},
 	})
 
-	out, err := runWith(t, f, "update", "users",
+	out, err := runWith(t, f, "update",
 		"--filter", `{"name": "Alice"}`,
 		"--update", `{"$set": {"age": 31}}`,
+		"users",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -391,7 +376,7 @@ func TestDoUpdate_Single(t *testing.T) {
 		t.Fatalf("unexpected counts: %v", rows[0])
 	}
 
-	findOut, err := runWith(t, f, "find", "users", "--filter", `{"name": "Alice"}`)
+	findOut, err := runWith(t, f, "find", "--filter", `{"name": "Alice"}`, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -409,10 +394,11 @@ func TestDoUpdate_Multi(t *testing.T) {
 		{{Key: "role", Value: "admin"}},
 	})
 
-	out, err := runWith(t, f, "update", "users",
+	out, err := runWith(t, f, "update",
 		"--filter", `{"role": "user"}`,
 		"--update", `{"$set": {"role": "member"}}`,
 		"--multi",
+		"users",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -427,9 +413,10 @@ func TestDoUpdate_NoMatch(t *testing.T) {
 	eng, f := newTestEngine(t)
 	eng.Insert("test", "users", []bson.D{{{Key: "name", Value: "Alice"}}})
 
-	out, err := runWith(t, f, "update", "users",
+	out, err := runWith(t, f, "update",
 		"--filter", `{"name": "Nobody"}`,
 		"--update", `{"$set": {"x": 1}}`,
+		"users",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -442,7 +429,7 @@ func TestDoUpdate_NoMatch(t *testing.T) {
 
 func TestDoUpdate_MissingUpdate(t *testing.T) {
 	_, f := newTestEngine(t)
-	_, err := runWith(t, f, "update", "users", "--filter", `{}`)
+	_, err := runWith(t, f, "update", "--filter", `{}`, "users")
 	if err == nil {
 		t.Fatal("expected error for missing --update")
 	}
@@ -457,7 +444,7 @@ func TestDoDelete_Single(t *testing.T) {
 		{{Key: "name", Value: "Bob"}},
 	})
 
-	out, err := runWith(t, f, "delete", "users", "--filter", `{"name": "Alice"}`)
+	out, err := runWith(t, f, "delete", "--filter", `{"name": "Alice"}`, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -484,7 +471,7 @@ func TestDoDelete_Multi(t *testing.T) {
 		{{Key: "role", Value: "admin"}},
 	})
 
-	out, err := runWith(t, f, "delete", "users", "--filter", `{"role": "user"}`, "--multi")
+	out, err := runWith(t, f, "delete", "--filter", `{"role": "user"}`, "--multi", "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -498,7 +485,7 @@ func TestDoDelete_NoMatch(t *testing.T) {
 	eng, f := newTestEngine(t)
 	eng.Insert("test", "users", []bson.D{{{Key: "name", Value: "Alice"}}})
 
-	out, err := runWith(t, f, "delete", "users", "--filter", `{"name": "Nobody"}`)
+	out, err := runWith(t, f, "delete", "--filter", `{"name": "Nobody"}`, "users")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -518,8 +505,9 @@ func TestDoAggregate_Group(t *testing.T) {
 		{{Key: "city", Value: "LA"}, {Key: "amount", Value: int32(5)}},
 	})
 
-	out, err := runWith(t, f, "aggregate", "orders",
+	out, err := runWith(t, f, "aggregate",
 		"--pipeline", `[{"$group": {"_id": "$city", "total": {"$sum": "$amount"}}}]`,
+		"orders",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -551,7 +539,7 @@ func TestDoAggregate_MissingPipeline(t *testing.T) {
 
 func TestDoAggregate_BadPipeline(t *testing.T) {
 	_, f := newTestEngine(t)
-	_, err := runWith(t, f, "aggregate", "orders", "--pipeline", `not json`)
+	_, err := runWith(t, f, "aggregate", "--pipeline", `not json`, "orders")
 	if err == nil {
 		t.Fatal("expected parse error")
 	}
@@ -585,7 +573,7 @@ func TestDoCount_WithFilter(t *testing.T) {
 		{{Key: "active", Value: true}},
 	})
 
-	out, err := runWith(t, f, "count", "items", "--filter", `{"active": true}`)
+	out, err := runWith(t, f, "count", "--filter", `{"active": true}`, "items")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -693,14 +681,14 @@ func TestRun_NoCommand_PrintsHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error for no-command (help), got %v", err)
 	}
-	if !strings.Contains(out, "Usage:") {
+	if !strings.Contains(out, "USAGE:") {
 		t.Fatalf("expected usage in output, got %q", out)
 	}
 }
 
 func TestRun_BadFilterJSON(t *testing.T) {
 	_, f := newTestEngine(t)
-	_, err := runWith(t, f, "find", "users", "--filter", `{bad}`)
+	_, err := runWith(t, f, "find", "--filter", `{bad}`, "users")
 	if err == nil {
 		t.Fatal("expected JSON parse error")
 	}
@@ -708,9 +696,73 @@ func TestRun_BadFilterJSON(t *testing.T) {
 
 func TestRun_FilterFileMissing(t *testing.T) {
 	_, f := newTestEngine(t)
-	_, err := runWith(t, f, "find", "users", "--filter-file", "/no/such/file.json")
+	_, err := runWith(t, f, "find", "--filter-file", "/no/such/file.json", "users")
 	if err == nil {
 		t.Fatal("expected error for missing filter file")
+	}
+}
+
+// --- normalizeArgs ---
+
+func TestNormalizeArgs_NewSyntax(t *testing.T) {
+	// Flags already before collection — no change expected.
+	in := []string{"--file", "f.json", "find", "--filter", "{}", "users"}
+	got := normalizeArgs(in)
+	want := []string{"--file", "f.json", "find", "--filter", "{}", "users"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestNormalizeArgs_OldSyntax(t *testing.T) {
+	// Collection before flags — should be moved to end.
+	in := []string{"--file", "f.json", "insert", "tasks", "--doc", `{"x":1}`}
+	got := normalizeArgs(in)
+	want := []string{"--file", "f.json", "insert", "--doc", `{"x":1}`, "tasks"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestNormalizeArgs_NoFlags(t *testing.T) {
+	// Collection only, no command flags — no change.
+	in := []string{"find", "users"}
+	got := normalizeArgs(in)
+	want := []string{"find", "users"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestNormalizeArgs_GlobalFlagEquals(t *testing.T) {
+	// --file=f.json form (no look-ahead).
+	in := []string{"--file=f.json", "find", "users", "--limit", "5"}
+	got := normalizeArgs(in)
+	want := []string{"--file=f.json", "find", "--limit", "5", "users"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+// TestRun_OldSyntax verifies that collection-before-flags syntax still works.
+func TestRun_OldSyntax(t *testing.T) {
+	_, f := newTestEngine(t)
+	// Old syntax: insert tasks --doc '...'
+	out, err := runWith(t, f, "insert", "tasks", "--doc", `{"x":1}`)
+	if err != nil {
+		t.Fatalf("insert (old syntax): %v", err)
+	}
+	if !strings.Contains(out, "insertedId") {
+		t.Fatalf("unexpected output: %s", out)
+	}
+	// Old syntax: find tasks --filter '{}'
+	out, err = runWith(t, f, "find", "tasks", "--filter", "{}")
+	if err != nil {
+		t.Fatalf("find (old syntax): %v", err)
+	}
+	docs := decodeLines(t, out)
+	if len(docs) != 1 {
+		t.Fatalf("expected 1 doc, got %d", len(docs))
 	}
 }
 
