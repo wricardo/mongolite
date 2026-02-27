@@ -1,5 +1,5 @@
 ---
-name: mongolite-agent
+name: mongolite
 description: >
   Use mongolite-cli to store, query, and update persistent state for AI agent workflows
   running in the mongolite project. Use this skill when an agent needs to: track task
@@ -9,7 +9,7 @@ description: >
   directly on a JSON file — no server needed.
 ---
 
-# mongolite-agent
+# mongolite
 
 ## Invocation
 
