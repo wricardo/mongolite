@@ -2,6 +2,8 @@
 
 A lightweight MongoDB-compatible database that stores all data in a single JSON file. Think SQLite, but for MongoDB.
 
+> mongolite is not trying to reproduce 100% of MongoDB. The goal is to mimic the most common commands, operators, and data model conventions so command-line workflows (especially AI agents keeping task state) can read/write structured data without provisioning a real cluster.
+
 mongolite ships as one binary with two modes:
 
 - **CLI** — read and write the data file directly, no server needed
@@ -13,6 +15,7 @@ mongolite ships as one binary with two modes:
 - **Single-file storage.** All data lives in one JSON file. Human-readable, diffable, committable.
 - **Zero dependencies at runtime.** Pure Go, no external services.
 - **Drop-in for development.** Use the same driver code you'd use with a real MongoDB instance.
+- **Agent-friendly CLI.** Optimized for scripting and AI workflows that need to persist task or scratch-pad state; feature set targets that usage instead of the full MongoDB surface area.
 
 ## Installation
 
