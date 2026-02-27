@@ -152,16 +152,21 @@ func marshalStoreJSON(s *Store) ([]byte, error) {
 				}
 				docs[i] = raw
 			}
-			var indexes interface{}
-			if len(coll.Indexes) > 0 {
-				idxRaw, err := bson.MarshalExtJSON(coll.Indexes, false, false)
+			// bson.MarshalExtJSON does not support slices at the top level in v2;
+			// marshal each IndexSpec individually (struct → document) and assemble the array.
+			idxParts := make([]json.RawMessage, len(coll.Indexes))
+			for i, idx := range coll.Indexes {
+				raw, err := bson.MarshalExtJSON(idx, false, false)
 				if err != nil {
-					return nil, fmt.Errorf("marshal indexes: %w", err)
+					return nil, fmt.Errorf("marshal index: %w", err)
 				}
-				indexes = json.RawMessage(idxRaw)
-			} else {
-				indexes = []interface{}{}
+				idxParts[i] = raw
 			}
+			idxJSON, err := json.Marshal(idxParts)
+			if err != nil {
+				return nil, fmt.Errorf("marshal indexes array: %w", err)
+			}
+			indexes := json.RawMessage(idxJSON)
 			colls[collName] = map[string]interface{}{
 				"documents": docs,
 				"indexes":   indexes,
