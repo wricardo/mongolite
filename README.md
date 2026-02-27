@@ -118,7 +118,7 @@ mongolite --file mydata.json find users --filter '{"age": {"$gt": 25}}' | jq -c 
 
 ### CRUD
 - `insert` / `insertOne` / `insertMany`
-- `find` (with filter, sort, skip, limit, projection)
+- `find` (with filter, sort, skip, limit)
 - `update` / `updateOne` / `updateMany` (with upsert)
 - `delete` / `deleteOne` / `deleteMany`
 - `findAndModify`
@@ -204,7 +204,7 @@ mongolite has two access paths that share the same storage engine:
 ```
   CLI mode (direct file access)        Server mode (wire protocol)
   ─────────────────────────────        ───────────────────────────
-  mongolite <command> --file F         MongoDB Client
+  mongolite --file F <command>          MongoDB Client
              │                                  │
              │                         TCP Listener (internal/server)
              │                                  │
