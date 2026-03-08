@@ -1,0 +1,1422 @@
+{
+  "databases": {
+    "analysis": {
+      "collections": {
+        "crud_commands": {
+          "documents": [
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c717"
+              },
+              "command": "aggregate",
+              "status": "supported",
+              "notes": "pipeline stages: $match, $limit, $skip, $sort, $project, $unwind, $group, $count, $lookup"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c718"
+              },
+              "command": "bulkWrite",
+              "status": "partial",
+              "notes": "supports insertOne, updateOne, updateMany, deleteOne, deleteMany, replaceOne; missing cross-collection support (MongoDB 8.0 bulkWrite), no ordered/error handling"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c719"
+              },
+              "command": "count",
+              "status": "supported",
+              "notes": "supports filter/query field"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c71a"
+              },
+              "command": "delete",
+              "status": "supported",
+              "notes": "supports q, limit; multi delete when limit=0"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c71b"
+              },
+              "command": "distinct",
+              "status": "supported",
+              "notes": "no handler registered"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c71c"
+              },
+              "command": "find",
+              "status": "supported",
+              "notes": "supports filter, sort, skip, limit, batchSize, singleBatch; no projection support",
+              "note": "filter, sort, skip, limit, projection, batchSize, singleBatch"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c71d"
+              },
+              "command": "findAndModify",
+              "status": "supported",
+              "notes": "supports query, sort, update, remove, new, upsert; no fields/projection"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c71e"
+              },
+              "command": "insert",
+              "status": "supported",
+              "notes": "supports documents array and OP_MSG Kind 1 sections"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c71f"
+              },
+              "command": "mapReduce",
+              "status": "not_supported",
+              "notes": "deprecated in MongoDB, unlikely to implement"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3ac964c992b7570c720"
+              },
+              "command": "update",
+              "status": "supported",
+              "notes": "supports q, u, multi, upsert; update operators: $set, $unset, $inc, $push, $pull, $addToSet, $rename, $min, $max, $mul"
+            }
+          ],
+          "indexes": []
+        },
+        "operators": {
+          "documents": [
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d7d"
+              },
+              "category": "Arithmetic",
+              "operator": "$abs",
+              "status": "supported",
+              "notes": "No expression evaluation in $project/$addFields"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d7e"
+              },
+              "category": "Arithmetic",
+              "operator": "$add",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d7f"
+              },
+              "category": "Arithmetic",
+              "operator": "$ceil",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d80"
+              },
+              "category": "Arithmetic",
+              "operator": "$divide",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d81"
+              },
+              "category": "Arithmetic",
+              "operator": "$exp",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d82"
+              },
+              "category": "Arithmetic",
+              "operator": "$floor",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d83"
+              },
+              "category": "Arithmetic",
+              "operator": "$ln",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d84"
+              },
+              "category": "Arithmetic",
+              "operator": "$log",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d85"
+              },
+              "category": "Arithmetic",
+              "operator": "$log10",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d86"
+              },
+              "category": "Arithmetic",
+              "operator": "$mod",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d87"
+              },
+              "category": "Arithmetic",
+              "operator": "$multiply",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d88"
+              },
+              "category": "Arithmetic",
+              "operator": "$pow",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d89"
+              },
+              "category": "Arithmetic",
+              "operator": "$round",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d8a"
+              },
+              "category": "Arithmetic",
+              "operator": "$sigmoid",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d8b"
+              },
+              "category": "Arithmetic",
+              "operator": "$sqrt",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d8c"
+              },
+              "category": "Arithmetic",
+              "operator": "$subtract",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3400ef3a9c0a1448d8d"
+              },
+              "category": "Arithmetic",
+              "operator": "$trunc",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e5e"
+              },
+              "category": "Array",
+              "operator": "$arrayElemAt",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e5f"
+              },
+              "category": "Array",
+              "operator": "$arrayToObject",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e60"
+              },
+              "category": "Array",
+              "operator": "$concatArrays",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e61"
+              },
+              "category": "Array",
+              "operator": "$filter",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e62"
+              },
+              "category": "Array",
+              "operator": "$firstN",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e63"
+              },
+              "category": "Array",
+              "operator": "$in",
+              "status": "supported",
+              "notes": "exists as query operator only"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e64"
+              },
+              "category": "Array",
+              "operator": "$indexOfArray",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e65"
+              },
+              "category": "Array",
+              "operator": "$isArray",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e66"
+              },
+              "category": "Array",
+              "operator": "$lastN",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e67"
+              },
+              "category": "Array",
+              "operator": "$map",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e68"
+              },
+              "category": "Array",
+              "operator": "$maxN",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e69"
+              },
+              "category": "Array",
+              "operator": "$minN",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e6a"
+              },
+              "category": "Array",
+              "operator": "$objectToArray",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e6b"
+              },
+              "category": "Array",
+              "operator": "$range",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e6c"
+              },
+              "category": "Array",
+              "operator": "$reduce",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e6d"
+              },
+              "category": "Array",
+              "operator": "$reverseArray",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e6e"
+              },
+              "category": "Array",
+              "operator": "$size",
+              "status": "supported",
+              "notes": "exists as query operator only"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e6f"
+              },
+              "category": "Array",
+              "operator": "$slice",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e70"
+              },
+              "category": "Array",
+              "operator": "$sortArray",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34a4cbe3cbfcff82e71"
+              },
+              "category": "Array",
+              "operator": "$zip",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f5713"
+              },
+              "category": "Bitwise",
+              "operator": "$bitAnd",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f5714"
+              },
+              "category": "Bitwise",
+              "operator": "$bitNot",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f5715"
+              },
+              "category": "Bitwise",
+              "operator": "$bitOr",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f5716"
+              },
+              "category": "Bitwise",
+              "operator": "$bitXor",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f5717"
+              },
+              "category": "Boolean",
+              "operator": "$and",
+              "status": "supported",
+              "notes": "works as query predicate only, not as aggregation expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f5718"
+              },
+              "category": "Boolean",
+              "operator": "$not",
+              "status": "supported",
+              "notes": "works as query predicate only, not as aggregation expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f5719"
+              },
+              "category": "Boolean",
+              "operator": "$or",
+              "status": "supported",
+              "notes": "works as query predicate only, not as aggregation expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f571a"
+              },
+              "category": "Comparison",
+              "operator": "$cmp",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f571b"
+              },
+              "category": "Comparison",
+              "operator": "$eq",
+              "status": "supported",
+              "notes": "works as query predicate only, not as aggregation expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f571c"
+              },
+              "category": "Comparison",
+              "operator": "$gt",
+              "status": "supported",
+              "notes": "works as query predicate only, not as aggregation expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f571d"
+              },
+              "category": "Comparison",
+              "operator": "$gte",
+              "status": "supported",
+              "notes": "works as query predicate only, not as aggregation expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f571e"
+              },
+              "category": "Comparison",
+              "operator": "$lt",
+              "status": "supported",
+              "notes": "works as query predicate only, not as aggregation expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f571f"
+              },
+              "category": "Comparison",
+              "operator": "$lte",
+              "status": "supported",
+              "notes": "works as query predicate only, not as aggregation expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad34af41f2c36ff3f5720"
+              },
+              "category": "Comparison",
+              "operator": "$ne",
+              "status": "supported",
+              "notes": "works as query predicate only, not as aggregation expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42a9"
+              },
+              "category": "Conditional",
+              "operator": "$cond",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42aa"
+              },
+              "category": "Conditional",
+              "operator": "$ifNull",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42ab"
+              },
+              "category": "Conditional",
+              "operator": "$switch",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42ac"
+              },
+              "category": "CustomAggregation",
+              "operator": "$accumulator",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42ad"
+              },
+              "category": "CustomAggregation",
+              "operator": "$function",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42ae"
+              },
+              "category": "DataSize",
+              "operator": "$binarySize",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42af"
+              },
+              "category": "DataSize",
+              "operator": "$bsonSize",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b0"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$avg",
+              "status": "partial",
+              "notes": "works in $group accumulator only, not as general expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b1"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$concatArrays",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b2"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$first",
+              "status": "partial",
+              "notes": "works in $group accumulator only"
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b3"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$last",
+              "status": "partial",
+              "notes": "works in $group accumulator only"
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b4"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$max",
+              "status": "partial",
+              "notes": "works in $group accumulator only"
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b5"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$median",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b6"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$min",
+              "status": "partial",
+              "notes": "works in $group accumulator only"
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b7"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$percentile",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b8"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$setUnion",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42b9"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$stdDevPop",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42ba"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$stdDevSamp",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42bb"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$sum",
+              "status": "partial",
+              "notes": "works in $group accumulator only"
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42bc"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$push",
+              "status": "partial",
+              "notes": "works in $group accumulator only"
+            },
+            {
+              "_id": {
+                "$oid": "69aad351d9dff3b047be42bd"
+              },
+              "category": "AccumulatorExpression",
+              "operator": "$addToSet",
+              "status": "partial",
+              "notes": "works in $group accumulator only"
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f154f"
+              },
+              "category": "Literal",
+              "operator": "$literal",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1550"
+              },
+              "category": "Miscellaneous",
+              "operator": "$getField",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1551"
+              },
+              "category": "Miscellaneous",
+              "operator": "$rand",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1552"
+              },
+              "category": "Miscellaneous",
+              "operator": "$sampleRate",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1553"
+              },
+              "category": "Miscellaneous",
+              "operator": "$toHashedIndexKey",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1554"
+              },
+              "category": "Object",
+              "operator": "$mergeObjects",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1555"
+              },
+              "category": "Object",
+              "operator": "$objectToArray",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1556"
+              },
+              "category": "Object",
+              "operator": "$setField",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1557"
+              },
+              "category": "Set",
+              "operator": "$allElementsTrue",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1558"
+              },
+              "category": "Set",
+              "operator": "$anyElementTrue",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1559"
+              },
+              "category": "Set",
+              "operator": "$setDifference",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f155a"
+              },
+              "category": "Set",
+              "operator": "$setEquals",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f155b"
+              },
+              "category": "Set",
+              "operator": "$setIntersection",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f155c"
+              },
+              "category": "Set",
+              "operator": "$setIsSubset",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f155d"
+              },
+              "category": "Set",
+              "operator": "$setUnion",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f155e"
+              },
+              "category": "String",
+              "operator": "$concat",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f155f"
+              },
+              "category": "String",
+              "operator": "$indexOfBytes",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1560"
+              },
+              "category": "String",
+              "operator": "$indexOfCP",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1561"
+              },
+              "category": "String",
+              "operator": "$ltrim",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1562"
+              },
+              "category": "String",
+              "operator": "$regexFind",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1563"
+              },
+              "category": "String",
+              "operator": "$regexFindAll",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1564"
+              },
+              "category": "String",
+              "operator": "$regexMatch",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1565"
+              },
+              "category": "String",
+              "operator": "$replaceOne",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1566"
+              },
+              "category": "String",
+              "operator": "$replaceAll",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1567"
+              },
+              "category": "String",
+              "operator": "$rtrim",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1568"
+              },
+              "category": "String",
+              "operator": "$split",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1569"
+              },
+              "category": "String",
+              "operator": "$strLenBytes",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f156a"
+              },
+              "category": "String",
+              "operator": "$strLenCP",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f156b"
+              },
+              "category": "String",
+              "operator": "$strcasecmp",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f156c"
+              },
+              "category": "String",
+              "operator": "$substrBytes",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f156d"
+              },
+              "category": "String",
+              "operator": "$substrCP",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f156e"
+              },
+              "category": "String",
+              "operator": "$toLower",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f156f"
+              },
+              "category": "String",
+              "operator": "$toString",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1570"
+              },
+              "category": "String",
+              "operator": "$trim",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad3638dc40ed9448f1571"
+              },
+              "category": "String",
+              "operator": "$toUpper",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82431"
+              },
+              "category": "Type",
+              "operator": "$convert",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82432"
+              },
+              "category": "Type",
+              "operator": "$isNumber",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82433"
+              },
+              "category": "Type",
+              "operator": "$toBool",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82434"
+              },
+              "category": "Type",
+              "operator": "$toDate",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82435"
+              },
+              "category": "Type",
+              "operator": "$toDecimal",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82436"
+              },
+              "category": "Type",
+              "operator": "$toDouble",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82437"
+              },
+              "category": "Type",
+              "operator": "$toInt",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82438"
+              },
+              "category": "Type",
+              "operator": "$toLong",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82439"
+              },
+              "category": "Type",
+              "operator": "$toObjectId",
+              "status": "supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8243a"
+              },
+              "category": "Type",
+              "operator": "$toString",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8243b"
+              },
+              "category": "Type",
+              "operator": "$type",
+              "status": "supported",
+              "notes": "exists as query operator ($type), not as expression"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8243c"
+              },
+              "category": "Type",
+              "operator": "$toUUID",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8243d"
+              },
+              "category": "Variable",
+              "operator": "$let",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8243e"
+              },
+              "category": "Window",
+              "operator": "$addToSet",
+              "status": "not_supported",
+              "notes": "window context - $setWindowFields not implemented"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8243f"
+              },
+              "category": "Window",
+              "operator": "$avg",
+              "status": "not_supported",
+              "notes": "window context - $setWindowFields not implemented"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82440"
+              },
+              "category": "Window",
+              "operator": "$bottom",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82441"
+              },
+              "category": "Window",
+              "operator": "$bottomN",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82442"
+              },
+              "category": "Window",
+              "operator": "$count",
+              "status": "supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82443"
+              },
+              "category": "Window",
+              "operator": "$covariancePop",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82444"
+              },
+              "category": "Window",
+              "operator": "$covarianceSamp",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82445"
+              },
+              "category": "Window",
+              "operator": "$denseRank",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82446"
+              },
+              "category": "Window",
+              "operator": "$derivative",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82447"
+              },
+              "category": "Window",
+              "operator": "$documentNumber",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82448"
+              },
+              "category": "Window",
+              "operator": "$expMovingAvg",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82449"
+              },
+              "category": "Window",
+              "operator": "$first",
+              "status": "not_supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8244a"
+              },
+              "category": "Window",
+              "operator": "$integral",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8244b"
+              },
+              "category": "Window",
+              "operator": "$last",
+              "status": "not_supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8244c"
+              },
+              "category": "Window",
+              "operator": "$linearFill",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8244d"
+              },
+              "category": "Window",
+              "operator": "$locf",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8244e"
+              },
+              "category": "Window",
+              "operator": "$max",
+              "status": "not_supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba8244f"
+              },
+              "category": "Window",
+              "operator": "$min",
+              "status": "not_supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82450"
+              },
+              "category": "Window",
+              "operator": "$minN",
+              "status": "not_supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82451"
+              },
+              "category": "Window",
+              "operator": "$push",
+              "status": "not_supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82452"
+              },
+              "category": "Window",
+              "operator": "$rank",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82453"
+              },
+              "category": "Window",
+              "operator": "$shift",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82454"
+              },
+              "category": "Window",
+              "operator": "$stdDevPop",
+              "status": "not_supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82455"
+              },
+              "category": "Window",
+              "operator": "$stdDevSamp",
+              "status": "not_supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82456"
+              },
+              "category": "Window",
+              "operator": "$sum",
+              "status": "not_supported",
+              "notes": "window context"
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82457"
+              },
+              "category": "Window",
+              "operator": "$top",
+              "status": "not_supported",
+              "notes": ""
+            },
+            {
+              "_id": {
+                "$oid": "69aad363dbdeadc1cba82458"
+              },
+              "category": "Window",
+              "operator": "$topN",
+              "status": "not_supported",
+              "notes": ""
+            }
+          ],
+          "indexes": []
+        }
+      }
+    }
+  }
+}

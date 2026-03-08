@@ -18,6 +18,11 @@ func MatchDoc(doc bson.D, filter bson.D) bool {
 		val := fe.Value
 
 		switch key {
+		case "$expr":
+			result := evalExpr(doc, val)
+			if !isTruthy(result) {
+				return false
+			}
 		case "$and":
 			arr, ok := val.(bson.A)
 			if !ok {

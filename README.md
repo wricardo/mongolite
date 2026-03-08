@@ -124,24 +124,43 @@ mongolite --file state.json list-schemas
 
 ### CRUD
 - `insert` / `insertOne` / `insertMany`
-- `find` (with filter, sort, skip, limit)
+- `find` (with filter, sort, skip, limit, projection)
 - `update` / `updateOne` / `updateMany` (with upsert)
 - `delete` / `deleteOne` / `deleteMany`
 - `findAndModify`
 - `count`
+- `distinct`
 - `bulkWrite`
 
 ### Query Operators
-`$eq` `$ne` `$gt` `$gte` `$lt` `$lte` `$in` `$nin` `$exists` `$type` `$and` `$or` `$nor` `$not` `$all` `$elemMatch` `$size`
+`$eq` `$ne` `$gt` `$gte` `$lt` `$lte` `$in` `$nin` `$exists` `$type` `$and` `$or` `$nor` `$not` `$all` `$elemMatch` `$size` `$expr`
 
 ### Update Operators
 `$set` `$unset` `$inc` `$mul` `$min` `$max` `$rename` `$push` `$pull` `$addToSet` `$currentDate`
 
 ### Aggregation Pipeline Stages
-`$match` `$project` `$sort` `$limit` `$skip` `$unwind` `$group` `$lookup` `$count`
+`$match` `$project` `$group` `$sort` `$limit` `$skip` `$unwind` `$lookup` `$count` `$addFields` `$set` `$unset` `$replaceRoot` `$replaceWith` `$sortByCount`
 
 ### Aggregation Accumulators
-`$sum` `$avg` `$min` `$max` `$first` `$last` `$push` `$addToSet`
+`$sum` `$avg` `$min` `$max` `$first` `$last` `$push` `$addToSet` `$count` `$stdDevPop` `$stdDevSamp` `$mergeObjects`
+
+### Aggregation Expression Operators
+
+**Arithmetic:** `$add` `$subtract` `$multiply` `$divide` `$mod` `$abs` `$ceil` `$floor` `$round` `$trunc` `$sqrt` `$pow` `$exp` `$log` `$log10`
+
+**Comparison:** `$eq` `$ne` `$gt` `$gte` `$lt` `$lte` `$cmp`
+
+**Boolean:** `$and` `$or` `$not`
+
+**Conditional:** `$cond` `$ifNull` `$switch`
+
+**String:** `$concat` `$toLower` `$toUpper` `$trim` `$ltrim` `$rtrim` `$split` `$strLenBytes` `$strLenCP` `$substr` `$substrBytes` `$substrCP` `$replaceOne` `$replaceAll` `$strcasecmp` `$indexOfBytes` `$toString`
+
+**Array:** `$size` `$arrayElemAt` `$isArray` `$concatArrays` `$slice` `$reverseArray` `$in` `$indexOfArray` `$range` `$firstN` `$lastN` `$filter` `$map` `$reduce` `$sortArray` `$arrayToObject` `$objectToArray` `$zip`
+
+**Type:** `$toInt` `$toLong` `$toDouble` `$toDecimal` `$toBool` `$toObjectId` `$isNumber` `$type` `$convert`
+
+**Miscellaneous:** `$literal` `$mergeObjects`
 
 ### Admin
 - `listDatabases` / `dropDatabase`

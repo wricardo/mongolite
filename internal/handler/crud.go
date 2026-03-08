@@ -18,6 +18,7 @@ func init() {
 	Register("count", cmdCount)
 	Register("getMore", cmdGetMore)
 	Register("getmore", cmdGetMore)
+	Register("distinct", cmdDistinct)
 }
 
 func cmdInsert(h *Handler, db string, cmd bson.D, sections []proto.Section) (bson.D, error) {
@@ -73,6 +74,7 @@ func cmdFind(h *Handler, db string, cmd bson.D, _ []proto.Section) (bson.D, erro
 
 	filter := getDocField(cmd, "filter")
 	sort := getDocField(cmd, "sort")
+	projection := getDocField(cmd, "projection")
 	skip := getInt64Field(cmd, "skip")
 	limit := getInt64Field(cmd, "limit")
 
@@ -93,6 +95,14 @@ func cmdFind(h *Handler, db string, cmd bson.D, _ []proto.Section) (bson.D, erro
 		return nil, err
 	}
 
+	// Apply projection if specified
+	if len(projection) > 0 {
+		results, err = engine.ProjectDocs(results, projection)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Convert to bson.A
 	batch := bson.A{}
 	for _, doc := range results {
@@ -106,6 +116,34 @@ func cmdFind(h *Handler, db string, cmd bson.D, _ []proto.Section) (bson.D, erro
 			{Key: "id", Value: int64(0)},
 			{Key: "ns", Value: ns},
 		}},
+		{Key: "ok", Value: float64(1)},
+	}, nil
+}
+
+func cmdDistinct(h *Handler, db string, cmd bson.D, _ []proto.Section) (bson.D, error) {
+	collName, _ := cmd[0].Value.(string)
+	if collName == "" {
+		return errorResp(2, "BadValue", "distinct requires a collection name"), nil
+	}
+
+	field := getStringField(cmd, "key")
+	if field == "" {
+		return errorResp(2, "BadValue", "distinct requires a key field"), nil
+	}
+	filter := getDocField(cmd, "query")
+
+	values, err := h.Engine.Distinct(db, collName, field, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	arr := bson.A{}
+	for _, v := range values {
+		arr = append(arr, v)
+	}
+
+	return bson.D{
+		{Key: "values", Value: arr},
 		{Key: "ok", Value: float64(1)},
 	}, nil
 }

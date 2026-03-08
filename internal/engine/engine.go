@@ -627,6 +627,37 @@ func (e *Engine) DropIndexes(db, coll string, name string) error {
 	return nil
 }
 
+// Distinct returns distinct values for a field across documents matching the filter.
+func (e *Engine) Distinct(db, coll, field string, filter bson.D) ([]interface{}, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	d := e.data.Databases[db]
+	if d == nil {
+		return nil, nil
+	}
+	c := d.Collections[coll]
+	if c == nil {
+		return nil, nil
+	}
+
+	docs := FilterDocs(c.Documents, filter)
+	seen := map[string]bool{}
+	var result []interface{}
+	for _, doc := range docs {
+		v, ok := GetField(doc, field)
+		if !ok {
+			continue
+		}
+		key := fmt.Sprintf("%v", v)
+		if !seen[key] {
+			seen[key] = true
+			result = append(result, v)
+		}
+	}
+	return result, nil
+}
+
 // ensureID adds an _id field if missing.
 func ensureID(doc bson.D) bson.D {
 	for _, e := range doc {
