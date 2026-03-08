@@ -62,6 +62,55 @@ mongolite --file state.json --db agent delete state \
   --filter '{"_id": "step:parse"}'
 ```
 
+## distinct
+
+Get all unique values for a field across a collection (with optional filter):
+
+```bash
+mongolite --file state.json --db agent distinct tasks --field status
+# → {"values":["pending","done","failed"]}
+```
+
+## find projection
+
+Limit returned fields with `--projection`:
+
+```bash
+mongolite --file state.json --db agent find tasks \
+  --filter '{"status":"pending"}' \
+  --projection '{"_id":1,"action":1}'
+```
+
+## $expr in filters
+
+Compare fields against each other or use expression operators inside a filter:
+
+```bash
+mongolite --file state.json --db agent find tasks \
+  --filter '{"$expr": {"$gt": ["$actual", "$expected"]}}'
+```
+
+## Aggregation with expressions
+
+Pipeline stages support full expression operators in computed fields and accumulators:
+
+```bash
+# Add a computed field without dropping others
+mongolite --file state.json --db agent aggregate items --pipeline '[
+  {"$addFields": {"total": {"$multiply": ["$qty", "$price"]}}}
+]'
+
+# Group with expression accumulator
+mongolite --file state.json --db agent aggregate items --pipeline '[
+  {"$group": {"_id": "$category", "revenue": {"$sum": {"$multiply": ["$qty","$price"]}}}}
+]'
+
+# Count docs per distinct value, sorted by count desc
+mongolite --file state.json --db agent aggregate tasks --pipeline '[
+  {"$sortByCount": "$status"}
+]'
+```
+
 ## No upsert in CLI
 
 The `update` command does **not** support `--upsert`. To create-or-update:
