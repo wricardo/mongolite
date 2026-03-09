@@ -1,6 +1,6 @@
 # mongolite
 
-Persistent state for AI agents — a single-binary, single-file database that speaks MongoDB's query language. No server to provision, no cluster to manage.
+Persistent state for AI agents — a single-binary, single-file database that speaks MongoDB's query language. No server to provision, no cluster to manage. Think SQLite, but for MongoDB.
 
 > mongolite is not trying to reproduce 100% of MongoDB. The goal is to mimic the most common commands, operators, and data model conventions so AI agents and CLI workflows can read/write structured state without provisioning a real cluster.
 
