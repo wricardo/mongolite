@@ -152,7 +152,35 @@ mongolite --file tests.json aggregate go_tests \
   venu "Format this as a test health report with recommendations."
 ```
 
-This pattern — agent populates structured records, you query and filter them, pipe results to an LLM — is what mongolite is for. The data survives between sessions, accumulates over time, and stays human-readable enough to inspect or commit alongside your code.
+**Document the schema** (so fresh agents know what each field means):
+
+```bash
+# Define what the test catalog looks like + describe its purpose
+mongolite --file tests.json set-schema go_tests --schema '{
+  "bsonType": "object",
+  "required": ["name", "status", "type", "category"],
+  "properties": {
+    "name": {"bsonType": "string", "description": "Test function name"},
+    "package": {"bsonType": "string"},
+    "file": {"bsonType": "string"},
+    "type": {"enum": ["unit", "integration", "e2e"], "description": "Test type"},
+    "category": {"bsonType": "string", "description": "Feature/domain category"},
+    "tldr": {"bsonType": "string", "description": "Plain-language summary of what the test verifies"},
+    "status": {"enum": ["pass", "fail"]},
+    "last_run": {"bsonType": "string"},
+    "last_inspected": {"bsonType": "string"},
+    "last_execution_ms": {"bsonType": "int"},
+    "tags": {"bsonType": "array"},
+    "gaps": {"bsonType": "string", "description": "Agent-identified coverage gaps"},
+    "failure_reason": {"bsonType": "string"}
+  }
+}' --description "Go test metadata and execution history. Used by agents to audit test coverage, find slow/failing tests, identify missing coverage, and prioritize test improvements. Fresh agents can read this schema to understand the structure without prior context."
+
+# Later, any agent can inspect the contract
+mongolite --file tests.json get-schema go_tests
+```
+
+This pattern — agent populates structured records, you query and filter them, pipe results to an LLM — is what mongolite is for. The data survives between sessions, accumulates over time, and stays human-readable enough to inspect or commit alongside your code. Schema metadata ensures fresh agents can pick up your project and understand what each collection represents without context.
 
 ## CLI Reference
 
