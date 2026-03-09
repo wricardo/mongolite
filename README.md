@@ -1,8 +1,8 @@
 # mongolite
 
-A lightweight MongoDB-compatible database that stores all data in a single JSON file. Think SQLite, but for MongoDB.
+Persistent state for AI agents — a single-binary, single-file database that speaks MongoDB's query language. No server to provision, no cluster to manage.
 
-> mongolite is not trying to reproduce 100% of MongoDB. The goal is to mimic the most common commands, operators, and data model conventions so command-line workflows (especially AI agents keeping task state) can read/write structured data without provisioning a real cluster.
+> mongolite is not trying to reproduce 100% of MongoDB. The goal is to mimic the most common commands, operators, and data model conventions so AI agents and CLI workflows can read/write structured state without provisioning a real cluster.
 
 mongolite ships as one binary with two modes:
 
@@ -11,11 +11,11 @@ mongolite ships as one binary with two modes:
 
 ## Why?
 
-- **No MongoDB installation required.** A single Go binary is all you need.
+- **Agent-friendly CLI.** Designed for AI workflows that need to persist task state, deduplicate work, checkpoint progress, or maintain a step queue — without spinning up infrastructure.
 - **Single-file storage.** All data lives in one JSON file. Human-readable, diffable, committable.
+- **No MongoDB installation required.** A single Go binary is all you need.
 - **Zero dependencies at runtime.** Pure Go, no external services.
 - **Drop-in for development.** Use the same driver code you'd use with a real MongoDB instance.
-- **Agent-friendly CLI.** Optimized for scripting and AI workflows that need to persist task or scratch-pad state; feature set targets that usage instead of the full MongoDB surface area.
 
 ## Installation
 
@@ -38,11 +38,121 @@ make install-skill    # installs binary + Claude Code skill
 ### CLI (no server required)
 
 ```bash
-mongolite --file mydata.json insert users --doc '{"name": "Alice", "age": 30}'
-mongolite --file mydata.json find users --filter '{"age": {"$gt": 25}}'
+mongolite --file state.json insert go_tests --doc '{"name": "TestLogin", "status": "pass", "type": "unit", "last_execution_ms": 12}'
+mongolite --file state.json find go_tests --filter '{"status": "fail"}'
+mongolite --file state.json update go_tests --filter '{"name": "TestLogin"}' --update '{"$set": {"last_run": "2025-03-09T10:00:00Z"}}'
 ```
 
-Most users stay in this happy path: point `--file` at a JSON datastore and run insert/find/update/delete directly. If you later need driver compatibility, see [Server Mode](#server-mode-optional).
+Point `--file` at a JSON file and operate on it directly. No server, no setup. For driver compatibility, see [Server Mode](#server-mode-optional).
+
+## Agent State Persistence
+
+mongolite is built for multi-step AI agent workflows. The CLI operates directly on the file — no server process needed. Shell scripts, Go, Python, and Node code can all share the same data file.
+
+The point is not just storing data — it's storing *rich, structured data* that an AI agent can populate, scan, query, and act on across sessions. A plain text file can track a to-do list. mongolite lets you maintain a living catalog with enough context that an AI can reason over it.
+
+### Example: Go test catalog
+
+An AI agent inspects your test files and writes a record for each test — its type, category, execution history, a plain-language summary, and any gaps the agent noticed. Now you have a queryable knowledge base your agent can use to find broken tests, spot uncovered areas, or prioritize what to review next.
+
+**Populate** (agent writes after reading test files):
+
+```bash
+mongolite --file tests.json insert go_tests --doc '{
+  "name": "TestUserCreate",
+  "package": "github.com/acme/api/users",
+  "file": "users/user_test.go",
+  "type": "unit",
+  "category": "auth",
+  "tldr": "Creates a user with valid email and password; checks returned ID is non-empty",
+  "last_run": "2025-03-08T14:22:00Z",
+  "last_inspected": "2025-03-08T14:00:00Z",
+  "last_execution_ms": 18,
+  "status": "pass",
+  "tags": ["user", "create"],
+  "gaps": "Does not test duplicate email — no conflict error coverage"
+}'
+
+mongolite --file tests.json insert go_tests --doc '{
+  "name": "TestCheckoutFlow",
+  "package": "github.com/acme/api/checkout",
+  "file": "checkout/checkout_e2e_test.go",
+  "type": "e2e",
+  "category": "payments",
+  "tldr": "Full checkout flow: cart → payment → order confirmation via HTTP",
+  "last_run": "2025-03-07T09:00:00Z",
+  "last_inspected": "2025-02-20T11:00:00Z",
+  "last_execution_ms": 4300,
+  "status": "fail",
+  "tags": ["checkout", "payments", "http"],
+  "gaps": "No test for declined card or partial refund path",
+  "failure_reason": "Stripe mock returns 500 on test card 4000000000000002"
+}'
+```
+
+**Query** (agent or human scans for actionable signal):
+
+```bash
+# All failing tests
+mongolite --file tests.json find go_tests --filter '{"status": "fail"}'
+
+# Slow e2e tests (over 2 seconds)
+mongolite --file tests.json find go_tests \
+  --filter '{"type": "e2e", "last_execution_ms": {"$gt": 2000}}' \
+  --sort '{"last_execution_ms": -1}'
+
+# Tests not inspected in the last 30 days
+mongolite --file tests.json find go_tests \
+  --filter '{"last_inspected": {"$lt": "2025-02-07T00:00:00Z"}}'
+
+# Tests with documented gaps (agent-identified missing coverage)
+mongolite --file tests.json find go_tests \
+  --filter '{"gaps": {"$exists": true}}' \
+  --projection '{"name": 1, "category": 1, "gaps": 1}'
+
+# Count by type
+mongolite --file tests.json aggregate go_tests \
+  --pipeline '[{"$group": {"_id": "$type", "count": {"$sum": 1}}}]'
+
+# Categories with no passing tests
+mongolite --file tests.json aggregate go_tests --pipeline '[
+  {"$group": {"_id": "$category", "passing": {"$sum": {"$cond": [{"$eq": ["$status", "pass"]}, 1, 0]}}}},
+  {"$match": {"passing": 0}}
+]'
+```
+
+**Update** (agent records test run results):
+
+```bash
+# After running go test, agent updates execution record
+mongolite --file tests.json update go_tests \
+  --filter '{"name": "TestCheckoutFlow"}' \
+  --update '{"$set": {
+    "status": "pass",
+    "last_run": "2025-03-09T10:00:00Z",
+    "last_execution_ms": 3900,
+    "failure_reason": null
+  }}'
+```
+
+**Feed to AI** (pipe the catalog into an LLM for analysis):
+
+```bash
+# Ask an AI to find missing test coverage across categories
+mongolite --file tests.json find go_tests | \
+  venu "Which categories have weak coverage? List gaps and suggest new test names."
+
+# Pipe only failing tests for focused triage
+mongolite --file tests.json find go_tests --filter '{"status": "fail"}' | \
+  venu "Summarize each failure and suggest a fix."
+
+# Ask for a health report
+mongolite --file tests.json aggregate go_tests \
+  --pipeline '[{"$group": {"_id": "$category", "total": {"$sum": 1}, "failing": {"$sum": {"$cond": [{"$eq": ["$status","fail"]},1,0]}}, "avg_ms": {"$avg": "$last_execution_ms"}}}]' | \
+  venu "Format this as a test health report with recommendations."
+```
+
+This pattern — agent populates structured records, you query and filter them, pipe results to an LLM — is what mongolite is for. The data survives between sessions, accumulates over time, and stays human-readable enough to inspect or commit alongside your code.
 
 ## CLI Reference
 
@@ -172,40 +282,6 @@ mongolite --file state.json list-schemas
 - OP_QUERY (opcode 2004) — legacy protocol for driver handshake compatibility
 - OP_REPLY (opcode 1) — legacy reply format
 
-## Use Case: Agent State Persistence
-
-mongolite works well as a local state store for multi-step AI agent workflows. The CLI operates directly on the file — no server process needed. Shell scripts, Go, Python, and Node code can all share the same data file.
-
-### Task state tracking
-
-```bash
-# Step 1: create a task
-mongolite --file agent.json insert tasks --doc '{"task_id": "abc", "status": "pending", "step": 1, "vars": {"url": "https://example.com"}}'
-
-# Step 2: read current state
-mongolite --file agent.json find tasks --filter '{"task_id": "abc"}' | jq '.vars'
-
-# Step 3: update after completing a step
-mongolite --file agent.json update tasks --filter '{"task_id": "abc"}' --update '{"$set": {"step": 2, "status": "in_progress", "vars.result": "fetched"}}'
-```
-
-### Step queue / control flow
-
-```bash
-# Enqueue steps
-mongolite --file agent.json insert-many steps --docs '[
-  {"order": 1, "action": "fetch", "done": false},
-  {"order": 2, "action": "parse", "done": false},
-  {"order": 3, "action": "summarize", "done": false}
-]'
-
-# Get next pending step
-mongolite --file agent.json find steps --filter '{"done": false}' --sort '{"order": 1}' --limit 1
-
-# Mark done
-mongolite --file agent.json update steps --filter '{"order": 1}' --update '{"$set": {"done": true, "result": "ok"}}'
-```
-
 ## Server Mode (optional)
 
 Need driver compatibility or remote access? Launch the lightweight server that mimics MongoDB wire operations while still persisting to the same single JSON file.
@@ -277,7 +353,7 @@ mongolite has two access paths that share the same storage engine:
 
 ## Limitations
 
-This is a development tool, not a production database.
+Built for agent workflows and local development, not production workloads.
 
 - No authentication or TLS
 - No replication or sharding
