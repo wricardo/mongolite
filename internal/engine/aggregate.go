@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"sort"
@@ -290,6 +291,36 @@ func unwindDocs(docs []bson.D, path string) ([]bson.D, error) {
 	return result, nil
 }
 
+// groupKeyString converts a group key into a canonical string that is unique
+// per distinct (type, value) pair, preventing collisions like int32(1) vs int64(1).
+func groupKeyString(key interface{}) string {
+	switch v := key.(type) {
+	case nil:
+		return "nil:"
+	case string:
+		return "string:" + v
+	case int32:
+		return fmt.Sprintf("int32:%d", v)
+	case int64:
+		return fmt.Sprintf("int64:%d", v)
+	case float64:
+		return fmt.Sprintf("float64:%v", v)
+	case bool:
+		return fmt.Sprintf("bool:%v", v)
+	case bson.ObjectID:
+		return "objectid:" + v.Hex()
+	case bson.D:
+		// Compound _id: marshal to BSON bytes and hex-encode for a stable canonical key.
+		b, err := bson.Marshal(v)
+		if err != nil {
+			return fmt.Sprintf("%T:%v", v, v)
+		}
+		return "bsond:" + hex.EncodeToString(b)
+	default:
+		return fmt.Sprintf("%T:%v", v, v)
+	}
+}
+
 func groupDocs(docs []bson.D, spec bson.D) ([]bson.D, error) {
 	// Find _id expression
 	var idExpr interface{}
@@ -309,7 +340,7 @@ func groupDocs(docs []bson.D, spec bson.D) ([]bson.D, error) {
 
 	for _, doc := range docs {
 		key := evalExpr(doc, idExpr)
-		keyStr := fmt.Sprintf("%v", key)
+		keyStr := groupKeyString(key)
 		idx, exists := groupIndex[keyStr]
 		if !exists {
 			idx = len(groups)
