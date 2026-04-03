@@ -47,16 +47,26 @@ Windows: download `mongolite_windows_amd64.zip` from the [releases page](https:/
 
 ```bash
 go install github.com/wricardo/mongolite@latest
-
-# Install the Claude Code skill (for AI agent workflows)
-mongolite install-skill
 ```
 
 Or with Make:
 
 ```bash
-make install          # installs the binary
-make install-skill    # installs binary + Claude Code skill
+make install    # installs the binary
+```
+
+### Claude Code skill
+
+If you use Claude Code, install the built-in skill so agents can call mongolite without prompting for flags:
+
+```bash
+mongolite install-skill
+```
+
+Or via Make:
+
+```bash
+make install-skill
 ```
 
 ## Quick Start
