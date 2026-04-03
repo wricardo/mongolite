@@ -19,6 +19,32 @@ mongolite ships as one binary with two modes:
 
 ## Installation
 
+### Download a prebuilt binary
+
+Grab the latest release from [GitHub Releases](https://github.com/wricardo/mongolite/releases/latest):
+
+```bash
+# macOS (Apple Silicon)
+curl -L https://github.com/wricardo/mongolite/releases/latest/download/mongolite_darwin_arm64.tar.gz | tar xz
+sudo mv mongolite /usr/local/bin/
+
+# macOS (Intel)
+curl -L https://github.com/wricardo/mongolite/releases/latest/download/mongolite_darwin_amd64.tar.gz | tar xz
+sudo mv mongolite /usr/local/bin/
+
+# Linux (amd64)
+curl -L https://github.com/wricardo/mongolite/releases/latest/download/mongolite_linux_amd64.tar.gz | tar xz
+sudo mv mongolite /usr/local/bin/
+
+# Linux (arm64)
+curl -L https://github.com/wricardo/mongolite/releases/latest/download/mongolite_linux_arm64.tar.gz | tar xz
+sudo mv mongolite /usr/local/bin/
+```
+
+Windows: download `mongolite_windows_amd64.zip` from the [releases page](https://github.com/wricardo/mongolite/releases/latest) and put `mongolite.exe` somewhere on your PATH.
+
+### Install from source
+
 ```bash
 go install github.com/wricardo/mongolite@latest
 
