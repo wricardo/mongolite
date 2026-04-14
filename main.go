@@ -77,6 +77,8 @@ Examples:
 					&cli.StringFlag{Name: "filter-file", Usage: "filter document from file"},
 					&cli.StringFlag{Name: "sort", Usage: "sort document (JSON)"},
 					&cli.StringFlag{Name: "sort-file", Usage: "sort document from file"},
+					&cli.StringFlag{Name: "projection", Usage: "projection document (JSON)"},
+					&cli.StringFlag{Name: "projection-file", Usage: "projection document from file"},
 					&cli.Int64Flag{Name: "limit", Usage: "max documents to return"},
 					&cli.Int64Flag{Name: "skip", Usage: "documents to skip"},
 				},
@@ -183,6 +185,25 @@ Examples:
 						return fmt.Errorf("open: %w", err)
 					}
 					return doAggregate(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
+				},
+			},
+			{
+				Name:  "distinct",
+				Usage: "get distinct values for a field in a collection",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "field", Usage: "field name"},
+					&cli.StringFlag{Name: "filter", Value: "{}", Usage: "filter document (JSON)"},
+					&cli.StringFlag{Name: "filter-file", Usage: "filter document from file"},
+				},
+				Action: func(c *cli.Context) error {
+					if c.NArg() == 0 {
+						return fmt.Errorf("distinct requires a collection name")
+					}
+					eng, err := engine.New(c.String("file"))
+					if err != nil {
+						return fmt.Errorf("open: %w", err)
+					}
+					return doDistinct(eng, c.String("db"), c.Args().First(), c, c.App.Writer)
 				},
 			},
 			{
@@ -369,9 +390,26 @@ func doFind(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Wr
 		}
 	}
 
+	var projectionDoc bson.D
+	projectionStr, err := readArg(c.String("projection"), c.String("projection-file"))
+	if err != nil {
+		return err
+	}
+	if projectionStr != "" {
+		if err := bson.UnmarshalExtJSON([]byte(projectionStr), false, &projectionDoc); err != nil {
+			return fmt.Errorf("parse projection: %w", err)
+		}
+	}
+
 	results, err := eng.Find(dbName, collName, filterDoc, sortDoc, c.Int64("skip"), c.Int64("limit"))
 	if err != nil {
 		return fmt.Errorf("find: %w", err)
+	}
+	if len(projectionDoc) > 0 {
+		results, err = engine.ProjectDocs(results, projectionDoc)
+		if err != nil {
+			return fmt.Errorf("project: %w", err)
+		}
 	}
 	for _, doc := range results {
 		if err := writeDoc(w, doc); err != nil {
@@ -481,6 +519,27 @@ func doAggregate(eng *engine.Engine, dbName, collName string, c *cli.Context, w 
 		}
 	}
 	return nil
+}
+
+func doDistinct(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {
+	field := c.String("field")
+	if field == "" {
+		return fmt.Errorf("distinct requires --field")
+	}
+	filterDoc, err := parseJSONArg(c.String("filter"), c.String("filter-file"))
+	if err != nil {
+		return err
+	}
+
+	values, err := eng.Distinct(dbName, collName, field, filterDoc)
+	if err != nil {
+		return fmt.Errorf("distinct: %w", err)
+	}
+	arr := bson.A{}
+	for _, v := range values {
+		arr = append(arr, v)
+	}
+	return writeJSON(w, bson.D{{Key: "values", Value: arr}})
 }
 
 func doCount(eng *engine.Engine, dbName, collName string, c *cli.Context, w io.Writer) error {

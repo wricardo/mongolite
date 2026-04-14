@@ -442,6 +442,12 @@ Or directly:
 go build -o mongolite .
 ```
 
+## Looking for something more serious?
+
+mongolite is an experimental project — great for AI agent workflows and local dev, but not intended for production use.
+
+If you need data versioning (branches, commits, diffs, merges), relational queries, ACID transactions, or production-grade storage, check out [DoltDB](https://github.com/dolthub/dolt) — a MySQL-compatible SQL database with Git-style version control for data. The hosted service is available at [DoltHub](https://www.dolthub.com/).
+
 ## License
 
 MIT

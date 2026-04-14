@@ -253,6 +253,70 @@ func TestDoFind_FilterFile(t *testing.T) {
 	}
 }
 
+func TestDoFind_SortFile(t *testing.T) {
+	eng, f := newTestEngine(t)
+	eng.Insert("test", "users", []bson.D{
+		{{Key: "name", Value: "Alice"}, {Key: "age", Value: int32(30)}},
+		{{Key: "name", Value: "Bob"}, {Key: "age", Value: int32(20)}},
+	})
+
+	sortFile := filepath.Join(t.TempDir(), "sort.json")
+	os.WriteFile(sortFile, []byte(`{"age": 1}`), 0644)
+
+	out, err := runWith(t, f, "find", "--sort-file", sortFile, "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 2 || rows[0]["name"] != "Bob" {
+		t.Fatalf("expected Bob first after sort-file, got %v", rows)
+	}
+}
+
+func TestDoFind_Projection(t *testing.T) {
+	eng, f := newTestEngine(t)
+	eng.Insert("test", "users", []bson.D{
+		{{Key: "name", Value: "Alice"}, {Key: "age", Value: int32(30)}, {Key: "role", Value: "admin"}},
+	})
+
+	out, err := runWith(t, f, "find", "--projection", `{"name": 1, "_id": 0}`, "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 doc, got %d", len(rows))
+	}
+	if rows[0]["name"] != "Alice" {
+		t.Fatalf("expected projected name field, got %v", rows[0])
+	}
+	if _, ok := rows[0]["age"]; ok {
+		t.Fatalf("did not expect age in projection result: %v", rows[0])
+	}
+	if _, ok := rows[0]["_id"]; ok {
+		t.Fatalf("did not expect _id in projection result: %v", rows[0])
+	}
+}
+
+func TestDoFind_ProjectionFile(t *testing.T) {
+	eng, f := newTestEngine(t)
+	eng.Insert("test", "users", []bson.D{
+		{{Key: "first", Value: "Ada"}, {Key: "last", Value: "Lovelace"}},
+	})
+
+	projectionFile := filepath.Join(t.TempDir(), "projection.json")
+	os.WriteFile(projectionFile, []byte(`{"full": {"$concat": ["$first", " ", "$last"]}, "_id": 0}`), 0644)
+
+	out, err := runWith(t, f, "find", "--projection-file", projectionFile, "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 1 || rows[0]["full"] != "Ada Lovelace" {
+		t.Fatalf("expected computed projection result, got %v", rows)
+	}
+}
+
 func TestDoFind_MissingCollection(t *testing.T) {
 	_, f := newTestEngine(t)
 	_, err := runWith(t, f, "find")
@@ -354,6 +418,21 @@ func TestDoInsertMany_BadJSON(t *testing.T) {
 	}
 }
 
+func TestDoInsertMany_DocsFile(t *testing.T) {
+	_, f := newTestEngine(t)
+	docsFile := filepath.Join(t.TempDir(), "docs.json")
+	os.WriteFile(docsFile, []byte(`[{"name":"A"},{"name":"B"}]`), 0644)
+
+	out, err := runWith(t, f, "insert-many", "--docs-file", docsFile, "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 1 || rows[0]["insertedCount"].(float64) != 2 {
+		t.Fatalf("expected insertedCount=2, got %v", rows)
+	}
+}
+
 // --- doUpdate ---
 
 func TestDoUpdate_Single(t *testing.T) {
@@ -435,6 +514,28 @@ func TestDoUpdate_MissingUpdate(t *testing.T) {
 	}
 }
 
+func TestDoUpdate_FilterAndUpdateFiles(t *testing.T) {
+	eng, f := newTestEngine(t)
+	eng.Insert("test", "users", []bson.D{
+		{{Key: "name", Value: "Alice"}, {Key: "age", Value: int32(30)}},
+		{{Key: "name", Value: "Bob"}, {Key: "age", Value: int32(25)}},
+	})
+
+	filterFile := filepath.Join(t.TempDir(), "filter.json")
+	updateFile := filepath.Join(t.TempDir(), "update.json")
+	os.WriteFile(filterFile, []byte(`{"name": "Bob"}`), 0644)
+	os.WriteFile(updateFile, []byte(`{"$set": {"age": 26}}`), 0644)
+
+	out, err := runWith(t, f, "update", "--filter-file", filterFile, "--update-file", updateFile, "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 1 || rows[0]["modifiedCount"].(float64) != 1 {
+		t.Fatalf("expected modifiedCount=1, got %v", rows)
+	}
+}
+
 // --- doDelete ---
 
 func TestDoDelete_Single(t *testing.T) {
@@ -495,6 +596,26 @@ func TestDoDelete_NoMatch(t *testing.T) {
 	}
 }
 
+func TestDoDelete_FilterFile(t *testing.T) {
+	eng, f := newTestEngine(t)
+	eng.Insert("test", "users", []bson.D{
+		{{Key: "name", Value: "Alice"}},
+		{{Key: "name", Value: "Bob"}},
+	})
+
+	filterFile := filepath.Join(t.TempDir(), "filter.json")
+	os.WriteFile(filterFile, []byte(`{"name": "Bob"}`), 0644)
+
+	out, err := runWith(t, f, "delete", "--filter-file", filterFile, "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 1 || rows[0]["deletedCount"].(float64) != 1 {
+		t.Fatalf("expected deletedCount=1, got %v", rows)
+	}
+}
+
 // --- doAggregate ---
 
 func TestDoAggregate_Group(t *testing.T) {
@@ -545,6 +666,73 @@ func TestDoAggregate_BadPipeline(t *testing.T) {
 	}
 }
 
+func TestDoAggregate_PipelineFile(t *testing.T) {
+	eng, f := newTestEngine(t)
+	eng.Insert("test", "orders", []bson.D{
+		{{Key: "status", Value: "open"}},
+		{{Key: "status", Value: "open"}},
+		{{Key: "status", Value: "closed"}},
+	})
+
+	pipelineFile := filepath.Join(t.TempDir(), "pipeline.json")
+	os.WriteFile(pipelineFile, []byte(`[{"$sortByCount": "$status"}]`), 0644)
+
+	out, err := runWith(t, f, "aggregate", "--pipeline-file", pipelineFile, "orders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 2 || rows[0]["_id"] != "open" || rows[0]["count"].(float64) != 2 {
+		t.Fatalf("expected sortByCount results, got %v", rows)
+	}
+}
+
+// --- doDistinct ---
+
+func TestDoDistinct_Basic(t *testing.T) {
+	eng, f := newTestEngine(t)
+	eng.Insert("test", "users", []bson.D{
+		{{Key: "role", Value: "admin"}},
+		{{Key: "role", Value: "user"}},
+		{{Key: "role", Value: "user"}},
+	})
+
+	out, err := runWith(t, f, "distinct", "--field", "role", "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 1 {
+		t.Fatalf("expected one result line, got %d", len(rows))
+	}
+	values, ok := rows[0]["values"].([]any)
+	if !ok || len(values) != 2 {
+		t.Fatalf("expected 2 distinct values, got %v", rows[0])
+	}
+}
+
+func TestDoDistinct_FilterFile(t *testing.T) {
+	eng, f := newTestEngine(t)
+	eng.Insert("test", "users", []bson.D{
+		{{Key: "team", Value: "red"}, {Key: "role", Value: "admin"}},
+		{{Key: "team", Value: "red"}, {Key: "role", Value: "user"}},
+		{{Key: "team", Value: "blue"}, {Key: "role", Value: "guest"}},
+	})
+
+	filterFile := filepath.Join(t.TempDir(), "filter.json")
+	os.WriteFile(filterFile, []byte(`{"team": "red"}`), 0644)
+
+	out, err := runWith(t, f, "distinct", "--field", "role", "--filter-file", filterFile, "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	values, ok := rows[0]["values"].([]any)
+	if !ok || len(values) != 2 {
+		t.Fatalf("expected filtered distinct values, got %v", rows)
+	}
+}
+
 // --- doCount ---
 
 func TestDoCount_All(t *testing.T) {
@@ -592,6 +780,26 @@ func TestDoCount_Empty(t *testing.T) {
 	rows := decodeLines(t, out)
 	if rows[0]["count"].(float64) != 0 {
 		t.Fatalf("expected count=0, got %v", rows[0])
+	}
+}
+
+func TestDoCount_FilterFile(t *testing.T) {
+	eng, f := newTestEngine(t)
+	eng.Insert("test", "items", []bson.D{
+		{{Key: "active", Value: true}},
+		{{Key: "active", Value: false}},
+	})
+
+	filterFile := filepath.Join(t.TempDir(), "filter.json")
+	os.WriteFile(filterFile, []byte(`{"active": false}`), 0644)
+
+	out, err := runWith(t, f, "count", "--filter-file", filterFile, "items")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 1 || rows[0]["count"].(float64) != 1 {
+		t.Fatalf("expected count=1, got %v", rows)
 	}
 }
 
@@ -662,6 +870,66 @@ func TestDoListCollections_WithData(t *testing.T) {
 	}
 	if !names["users"] || !names["orders"] {
 		t.Fatalf("missing expected collection names: %v", names)
+	}
+}
+
+// --- schema commands ---
+
+func TestDoSchema_RoundTrip(t *testing.T) {
+	_, f := newTestEngine(t)
+	schemaFile := filepath.Join(t.TempDir(), "schema.json")
+	os.WriteFile(schemaFile, []byte(`{"bsonType":"object","required":["_id"],"properties":{"_id":{"bsonType":"string"},"status":{"enum":["pending","done"]}}}`), 0644)
+
+	out, err := runWith(t, f, "set-schema", "--schema-file", schemaFile, "--description", "Task collection", "tasks")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := decodeLines(t, out)
+	if len(rows) != 1 || rows[0]["ok"].(float64) != 1 {
+		t.Fatalf("expected ok=1 from set-schema, got %v", rows)
+	}
+
+	out, err = runWith(t, f, "get-schema", "tasks")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows = decodeLines(t, out)
+	if len(rows) != 1 {
+		t.Fatalf("expected one get-schema row, got %d", len(rows))
+	}
+	if rows[0]["collection"] != "tasks" || rows[0]["description"] != "Task collection" {
+		t.Fatalf("unexpected get-schema row: %v", rows[0])
+	}
+
+	schema, ok := rows[0]["schema"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected schema object, got %T (%v)", rows[0]["schema"], rows[0]["schema"])
+	}
+	if schema["bsonType"] != "object" {
+		t.Fatalf("expected bsonType=object, got %v", schema)
+	}
+
+	out, err = runWith(t, f, "list-schemas")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows = decodeLines(t, out)
+	if len(rows) != 1 || rows[0]["collection"] != "tasks" {
+		t.Fatalf("expected tasks in list-schemas, got %v", rows)
+	}
+
+	out, err = runWith(t, f, "delete-schema", "tasks")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows = decodeLines(t, out)
+	if len(rows) != 1 || rows[0]["ok"].(float64) != 1 {
+		t.Fatalf("expected ok=1 from delete-schema, got %v", rows)
+	}
+
+	_, err = runWith(t, f, "get-schema", "tasks")
+	if err == nil {
+		t.Fatal("expected get-schema to fail after delete")
 	}
 }
 
