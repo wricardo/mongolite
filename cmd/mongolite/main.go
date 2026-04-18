@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,9 +12,8 @@ import (
 	"github.com/urfave/cli/v2"
 	"go.mongodb.org/mongo-driver/v2/bson"
 
+	mongolite "github.com/wricardo/mongolite"
 	"github.com/wricardo/mongolite/internal/engine"
-	"github.com/wricardo/mongolite/internal/handler"
-	"github.com/wricardo/mongolite/internal/server"
 )
 
 func main() {
@@ -58,15 +56,8 @@ Examples:
 					&cli.IntFlag{Name: "port", Value: 27017, Usage: "TCP port to listen on"},
 				},
 				Action: func(c *cli.Context) error {
-					eng, err := engine.New(c.String("file"))
-					if err != nil {
-						return fmt.Errorf("failed to initialize engine: %w", err)
-					}
-					h := handler.New(eng)
 					addr := fmt.Sprintf(":%d", c.Int("port"))
-					srv := server.New(addr, h)
-					log.Printf("mongolite server starting on %s (file: %s)", addr, c.String("file"))
-					return srv.ListenAndServe()
+					return mongolite.ListenAndServe(addr, c.String("file"))
 				},
 			},
 			{
@@ -648,7 +639,7 @@ func installSkill() error {
 	skillDest := filepath.Join(home, ".claude", "skills")
 
 	const embedRoot = ".claude/skills/mongolite"
-	return fs.WalkDir(skillFS, embedRoot, func(path string, d fs.DirEntry, err error) error {
+	return fs.WalkDir(mongolite.SkillFS, embedRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -660,7 +651,7 @@ func installSkill() error {
 			return os.MkdirAll(dest, 0755)
 		}
 
-		data, err := skillFS.ReadFile(path)
+		data, err := mongolite.SkillFS.ReadFile(path)
 		if err != nil {
 			return err
 		}

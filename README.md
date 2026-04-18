@@ -43,10 +43,27 @@ sudo mv mongolite /usr/local/bin/
 
 Windows: download `mongolite_windows_amd64.zip` from the [releases page](https://github.com/wricardo/mongolite/releases/latest) and put `mongolite.exe` somewhere on your PATH.
 
-### Install from source
+### Go library
+
+Use mongolite as an embedded server in your own Go project:
+
+```go
+import "github.com/wricardo/mongolite"
+
+// Starts a MongoDB wire-protocol server on :27017, backed by data.json.
+if err := mongolite.ListenAndServe(":27017", "data.json"); err != nil {
+    log.Fatal(err)
+}
+```
 
 ```bash
-go install github.com/wricardo/mongolite@latest
+go get github.com/wricardo/mongolite@latest
+```
+
+### Install from source (CLI)
+
+```bash
+go install github.com/wricardo/mongolite/cmd/mongolite@latest
 ```
 
 Or with Make:
@@ -439,7 +456,7 @@ make test           # run tests
 Or directly:
 
 ```bash
-go build -o mongolite .
+go build -o mongolite ./cmd/mongolite
 ```
 
 ## Looking for something more serious?
