@@ -13,7 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 
 	mongolite "github.com/wricardo/mongolite"
-	"github.com/wricardo/mongolite/internal/engine"
+	"github.com/wricardo/mongolite/engine"
 )
 
 func main() {

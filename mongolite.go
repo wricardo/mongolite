@@ -3,7 +3,7 @@ package mongolite
 import (
 	"fmt"
 
-	"github.com/wricardo/mongolite/internal/engine"
+	"github.com/wricardo/mongolite/engine"
 	"github.com/wricardo/mongolite/internal/handler"
 	"github.com/wricardo/mongolite/internal/server"
 )

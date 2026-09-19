@@ -3,7 +3,7 @@ package handler
 import (
 	"fmt"
 
-	"github.com/wricardo/mongolite/internal/engine"
+	"github.com/wricardo/mongolite/engine"
 	"github.com/wricardo/mongolite/internal/proto"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )

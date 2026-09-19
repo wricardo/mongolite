@@ -419,7 +419,7 @@ mongolite has two access paths that share the same storage engine:
              │                           Dispatches insert/find/update/...
              └──────────────────────────────────┘
                                         │
-                               Storage Engine (internal/engine)
+                               Storage Engine (engine)
                                  In-memory store, RWMutex,
                                  filter matching, update operators,
                                  aggregation pipeline

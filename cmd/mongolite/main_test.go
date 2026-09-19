@@ -10,7 +10,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 
-	"github.com/wricardo/mongolite/internal/engine"
+	"github.com/wricardo/mongolite/engine"
 )
 
 // newTestEngine creates a fresh engine backed by a temp file.

@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/wricardo/mongolite/internal/engine"
+	"github.com/wricardo/mongolite/engine"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
